@@ -42,6 +42,8 @@ N₂ has 8 different types that encodes nicely into 3 bits of information.
 7 - REF (index)
 ```
 
+With the 7 types plus `EXT` we can technically make infinite types.  For example `NUM` is integer, but `EXT NUM` is decimal and `EXT LST` is array.
+
 ### NUM (signed int) - Integer
 
 Simply encode any `i64` value with type tag `NUM` and the value as.
