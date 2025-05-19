@@ -87,6 +87,22 @@ for i = -200, 200 do
 	assert(i == exponent, i)
 end
 
+---@param val table
+local function is_array_like(val)
+	local mt = getmetatable(val)
+	if mt and mt.__is_array_like ~= nil then
+		return mt.__is_array_like
+	end
+	local i = 0
+	for k in pairs(val) do
+		i = i + 1
+		if k ~= i then
+			return false
+		end
+	end
+	return true
+end
+
 local capacity = 1024
 local buf = U8(capacity)
 
@@ -215,15 +231,69 @@ local function encode(root_val)
 		write_pair(STR, #str)
 	end
 
-	local typ = type(root_val)
-	if typ == "string" then
-		encode_string(root_val)
-	elseif typ == "number" then
-		encode_number(root_val)
-	else
-		error("Unsupported type: " .. typ)
+	local encode_any
+
+	local function encode_list(lst)
+		local stack = {}
+		local height
+		for i, v in ipairs(lst) do
+			height = i
+			stack[height] = v
+		end
+		local start = size
+		for i = height, 1, -1 do
+			encode_any(stack[i])
+		end
+		write_pair(LST, size - start)
 	end
 
+	local function encode_map(map)
+		local stack = {}
+		local height = 0
+		for k, v in pairs(map) do
+			height = height + 1
+			stack[height] = v
+			height = height + 1
+			stack[height] = k
+		end
+		local start = size
+		for i = height, 1, -1 do
+			encode_any(stack[i])
+		end
+		write_pair(MAP, size - start)
+	end
+
+	local function encode_table(val)
+		if is_array_like(val) then
+			encode_list(val)
+		else
+			encode_map(val)
+		end
+	end
+
+	---@param val any
+	function encode_any(val)
+		if val == nil then
+			write_pair(REF, NULL)
+		elseif val == true then
+			write_pair(REF, TRUE)
+		elseif val == false then
+			write_pair(REF, FALSE)
+		else
+			local typ = type(val)
+			if typ == "string" then
+				encode_string(val)
+			elseif typ == "number" then
+				encode_number(val)
+			elseif typ == "table" then
+				encode_table(val)
+			else
+				error("Unsupported type: " .. typ)
+			end
+		end
+	end
+
+	encode_any(root_val)
 	return ffi.string(buf, size)
 end
 
@@ -246,7 +316,6 @@ local oct_lookup = {
 	[0xF] = "1111",
 }
 
----@param value map<integer,string>>]
 local hex_lookup = {}
 for i = 0, 255 do
 	hex_lookup[i] = oct_lookup[arshift(i, 4)] .. oct_lookup[band(i, 0x0f)]
@@ -282,18 +351,18 @@ test(-129)
 test(1e10)
 test(1e20)
 test(1e30)
--- test(1e100)
--- test(1e200)
--- test(-1e100)
--- test(-1e200)
--- test(1e-100)
--- test(1e-200)
--- test(-1e-100)
--- test(-1e-200)
--- p(1e-200, encode(1e-200))
--- p(-1e200, encode(-1e200))
--- p(-1e-200, encode(-1e-200))
+test(123.456)
+test(12345.6789)
+test(math.pi)
+test(math.pi * 1e300)
+test(math.pi * 1e-300)
 
+test("")
+test("Hello World")
+test("Hello World" .. string.rep("!", 100))
+
+test({ 1, 2, 3 })
+test({ name = "N2", new = true })
 -- print(encode(""))
 -- print(encode("Hello World"))
 -- print(encode(("Hello World"):rep(10)))
