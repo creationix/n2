@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>N2: A Packer's Lament</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
+    body {
+      background-color: #0a0a0a;
+      /* Very dark, almost black */
+      color: #c0c0c0;
+      /* Light grey for main text */
+      font-family: 'Share Tech Mono', monospace;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      line-height: 1.7;
+      overflow-x: hidden;
+      /* Prevent horizontal scroll from glows */
+    }
+
+    .poem-container {
+      background-color: #121212;
+      /* Slightly lighter dark for container */
+      border: 1px solid #2a2a2a;
+      padding: 30px 40px;
+      max-width: 700px;
+      width: 90%;
+      box-shadow: 0 0 25px rgba(0, 200, 100, 0.1),
+        /* Subtle green glow */
+        0 0 10px rgba(0, 0, 0, 0.5) inset;
+      position: relative;
+      /* For pseudo-elements if needed */
+    }
+
+    /* Optional: Subtle scanline effect */
+    .poem-container::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(rgba(18, 18, 18, 0) 50%,
+          rgba(0, 0, 0, 0.15) 50%);
+      background-size: 100% 4px;
+      /* Adjust scanline thickness */
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .poem-content {
+      position: relative;
+      /* To ensure text is above scanlines */
+      z-index: 2;
+    }
+
+    h1 {
+      font-family: 'VT323', monospace;
+      color: #00ff99;
+      /* Bright, "terminal" green */
+      text-align: center;
+      font-size: 2.8em;
+      margin-bottom: 30px;
+      text-shadow: 0 0 5px #00ff99,
+        0 0 10px #00ff99,
+        0 0 15px rgba(0, 255, 153, 0.5);
+      letter-spacing: 1px;
+    }
+
+    p {
+      margin-bottom: 20px;
+      font-size: 1.1em;
+    }
+
+    .keyword {
+      /* ttt, zero, one, two */
+      color: #ff6f00;
+      /* Vibrant orange */
+      font-weight: bold;
+      text-shadow: 0 0 3px #ff6f00;
+    }
+
+    .type-int,
+    .type-dec,
+    .type-str,
+    .type-bin,
+    .type-list,
+    .type-map,
+    .type-ptr,
+    .type-ref {
+      color: #4fc3f7;
+      /* Light, techy blue */
+      font-style: italic;
+      text-shadow: 0 0 3px #4fc3f7;
+    }
+
+    .term {
+      /* zigzag-value, length, offset, index, base, power */
+      color: #ffee58;
+      /* Yellow, like a warning or highlight */
+      text-shadow: 0 0 3px #ffee58;
+    }
+
+    .builtin-ref {
+      /* null, true, false */
+      color: #ba68c8;
+      /* Muted purple */
+      font-weight: bold;
+      text-shadow: 0 0 3px #ba68c8;
+    }
+
+    code.bit-pattern {
+      background-color: #1e1e1e;
+      color: #9ccc65;
+      /* Lime green for code */
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid #333;
+      font-family: 'VT323', monospace;
+      font-size: 1.1em;
+      /* Slightly larger for clarity */
+      text-shadow: 0 0 2px #9ccc65;
+    }
+
+    /* Subtle animation for keywords on hover - optional */
+    .keyword:hover,
+    .type-int:hover,
+    .type-dec:hover,
+    .type-str:hover,
+    .type-bin:hover,
+    .type-list:hover,
+    .type-map:hover,
+    .type-ptr:hover,
+    .type-ref:hover,
+    .term:hover,
+    .builtin-ref:hover {
+      animation: subtle-glow 1.5s infinite alternate;
+    }
+
+    @keyframes subtle-glow {
+      from {
+        opacity: 0.8;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="poem-container">
+    <div class="poem-content">
+      <h1>N2: A Packer's Lament</h1>
+
+      <p>
+        The bloated frame, a memory now faint,<br>
+        Replaced by whispers, of a new constraint.<br>
+        Three bits upfront, the <span class="keyword">ttt</span>'s decree,<br>
+        Dictate the form of what's to come, you see.<br>
+        A <span class="keyword">zero</span> first, then four, a fleeting sign,<br>
+        For <span class="type-int">integers</span>, in `<span class="term">zigzag-value</span>`'s shrine.<br>
+        No wasted sign, the negative embraced,<br>
+        A twisted path, efficiently traced.
+      </p>
+
+      <p>
+        But if a <span class="keyword">one</span>, the `<span class="keyword">ttt</span>` should betray,<br>
+        The varint stretches, steals another day.<br>
+        Seven more bits, a hungry, grasping hand,<br>
+        `<code class="bit-pattern">1xxxx</code>`, then `<code class="bit-pattern">0xxxxxxx</code>`, across the
+        land<br>
+        Of bytes consumed, a chain that pulls and bites,<br>
+        Until the final zero dims the lights.
+      </p>
+
+      <p>
+        Then comes the `<span class="type-dec">decimal</span>`, a peculiar pair,<br>
+        Two varints born, a burden they must bear.<br>
+        The first, `<span class="term">zigzag-power</span>`, sharp and keen,<br>
+        The second, `<span class="term">base</span>`, a fuller, fatter scene.<br>
+        Eight bits it claims, to start its solemn quest,<br>
+        No `<span class="keyword">ttt</span>` to guide, it puts the rule to test.<br>
+        `<code class="bit-pattern">0xxxxxxx</code>`, or `<code class="bit-pattern">1xxxxxxx</code>`'s
+        sprawl,<br>
+        A dual dance, responding to the call.
+      </p>
+
+      <p>
+        For `<span class="type-str">string</span>` and `<span class="type-bin">binary</span>`, a simple `<span
+          class="term">length</span>` defined,<br>
+        The measure told, the data left behind.<br>
+        The `<span class="type-list">list</span>` and `<span class="type-map">map</span>`, their children to
+        declare,<br>
+        A varint count, how many souls are there.
+      </p>
+
+      <p>
+        The `<span class="type-ptr">pointer</span>` leaps, an `<span class="term">offset</span>` in the
+        gloom,<br>
+        To find its mark within the crowded room.<br>
+        And `<span class="type-ref">refs</span>` point back, an `<span class="term">index</span>` sharp and
+        cold,<br>
+        To stories that have previously been told.<br>
+        The sacred `<span class="keyword">zero</span>`, `<span class="builtin-ref">null</span>`'s eternal
+        void,<br>
+        Then `<span class="keyword">one</span>` for `<span class="builtin-ref">true</span>`, a verity
+        enjoyed.<br>
+        And `<span class="keyword">two</span>` for `<span class="builtin-ref">false</span>`, the stark
+        negation's chill,<br>
+        Built-in constants, standing stark and still.
+      </p>
+
+      <p>
+        So flows the stream, a current dense and deep,<br>
+        Where types are bound, and secrets tightly sleep.<br>
+        Each packet lean, a specter, swift and grim,<br>
+        Born of the `<span class="keyword">ttt</span>`, and the Optimizer's whim.<br>
+        The network sighs, a breath it scarce can find,<br>
+        For in this darkness, elegance we find –<br>
+        Not in the fluff, but in the stark design,<br>
+        Where every bit, by cruel decree, must align.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>
