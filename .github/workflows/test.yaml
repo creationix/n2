@@ -10,4 +10,4 @@ jobs:
         uses: actions/checkout@v2
       - name: Run Tests in LuaJIT
         run: |
-          luajit n2.test.lua
+          luajit -jp=2zfi1m1 n2.test.lua

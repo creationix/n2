@@ -1,6 +1,7 @@
 local N2 = require 'n2'
 local Tibs = require 'tibs'
 local dump = require 'dump'
+local zone = require 'jit.zone'
 
 local bit = require 'bit'
 local ffi = require 'ffi'
@@ -28,6 +29,7 @@ local i32Box = ffi.new 'int32_t[1]'
 local i16Box = ffi.new 'int16_t[1]'
 local i8Box = ffi.new 'int8_t[1]'
 
+zone 'split_number'
 -- Unit test for split_number
 for i = -200, 200 do
   local base, exponent = N2.split_number(0)
@@ -43,6 +45,7 @@ for i = -200, 200 do
   assert(base == 12345678912345)
   assert(i == exponent, i)
 end
+zone()
 
 local oct_lookup = {
   [0x0] = '0000',
@@ -100,6 +103,7 @@ local function test(value, expected, ...)
   end
 end
 
+zone 'unit'
 -- Overrite pairs to have sorted keys
 local original_pairs = _G.pairs
 function _G.pairs(tab)
@@ -371,6 +375,10 @@ test(
   true
 )
 
+zone()
+
+zone 'tibs'
+
 local function readfile(path)
   local f = assert(io.open(path, 'r'))
   local data = assert(f:read '*a')
@@ -390,29 +398,53 @@ local samples = {
   'sample9.json',
 }
 
--- _G.pairs = original_pairs
+_G.pairs = original_pairs
 local files = {}
+local json_sizes = {}
 for _, filename in ipairs(samples) do
   print('Loading', filename)
   local json = readfile(filename)
   local sample = Tibs.decode(json, filename)
   local json2 = Tibs.encode(sample)
   print('JSON', #json2)
+  json_sizes[filename] = #json2
   files[filename] = sample
 end
 
-for i = 1, 1000 do
-  for filename, sample in pairs(files) do
-    -- print('Testing', filename)
-    local n2
-    n2 = N2.encode_to_string(sample, i % 10 == 0)
-    -- print('N2', #n2)
+zone()
+
+local function humanize_bytes(bytes)
+  if bytes < 0x400 then
+    return string.format('%d bytes', bytes)
+  elseif bytes < 0x100000 then
+    return string.format('%.1f KiB', bytes / 1024)
+  else
+    return string.format('%.1f MiB', bytes / 1024 / 1024)
   end
 end
 
-local size = 0
-N2.encode(files['sample1.json'], function(ptr, len)
-  print('WRITE', dump(ptr), dump(len))
-  size = size + len
-  return size
-end, true)
+zone 'bench'
+
+local sum = 0
+for filename, sample in pairs(files) do
+  zone(filename)
+  local json_size, n2_size
+  print('Testing', filename)
+  for i = 1, 1000 do
+    local n2 = N2.encode_to_string(sample, i % 10 == 0)
+    sum = sum + #n2
+    json_size = json_sizes[filename]
+    n2_size = #n2
+  end
+  print(
+    string.format(
+      'JSON size %s -> N2 size %s : %.1f%%',
+      humanize_bytes(json_size),
+      humanize_bytes(n2_size),
+      n2_size / json_size * 100
+    )
+  )
+  zone()
+end
+
+zone()
