@@ -401,14 +401,14 @@ for _, filename in ipairs(samples) do
   files[filename] = sample
 end
 
--- for i = 1, 1000 do
---   for filename, sample in pairs(files) do
---     -- print('Testing', filename)
---     local n2
---     n2 = N2.encode_to_string(sample, i % 10 == 0)
---     -- print('N2', #n2)
---   end
--- end
+for i = 1, 1000 do
+  for filename, sample in pairs(files) do
+    -- print('Testing', filename)
+    local n2
+    n2 = N2.encode_to_string(sample, i % 10 == 0)
+    -- print('N2', #n2)
+  end
+end
 
 local size = 0
 N2.encode(files['sample1.json'], function(ptr, len)
