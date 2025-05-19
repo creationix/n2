@@ -82,27 +82,13 @@ local function split_number(val)
 	return val, 0
 end
 
--- Inline unit test for split_number
-for i = -200, 200 do
-	local base, exponent = split_number(0)
-	assert(base == 0, base)
-	assert(exponent == 0, exponent)
-	base, exponent = split_number(math.pow(10, i))
-	assert(base == 1)
-	assert(i == exponent, i)
-	base, exponent = split_number(314 * math.pow(10, i))
-	assert(base == 314)
-	assert(i == exponent, i)
-	base, exponent = split_number(12345678912345 * math.pow(10, i))
-	assert(base == 12345678912345)
-	assert(i == exponent, i)
-end
-
 ---@param val table
 local function is_array_like(val)
 	local mt = getmetatable(val)
-	if mt and mt.__is_array_like ~= nil then
-		return mt.__is_array_like
+	if mt then
+		if mt.__is_array_like ~= nil then
+			return mt.__is_array_like
+		end
 	end
 	local i = 0
 	for k in pairs(val) do
@@ -126,6 +112,13 @@ local function is_integer(val)
 		or istype(U32, val)
 		or istype(U16, val)
 		or istype(U8, val)
+end
+
+--- Detect if a cdata is a float
+---@param val ffi.cdata*
+---@return boolean
+local function is_float(val)
+	return istype(F32, val) or istype(F64, val)
 end
 
 local capacity = 1024
@@ -159,7 +152,6 @@ local function encode(root_val)
 	---@param byte integer
 	local function write_byte(byte)
 		ensure_capacity(size + 1)
-		p({ size = size, buf = buf, byte = byte })
 		buf[size] = byte
 		size = size + 1
 	end
@@ -243,8 +235,15 @@ local function encode(root_val)
 	end
 
 	local function encode_integer(val)
-		p("encode_integer", val)
 		write_signed_pair(NUM, val)
+	end
+
+	local function encode_float(val)
+		local base, power = split_number(val)
+		if power >= 0 and power < 10 then
+			return encode_integer(val)
+		end
+		write_signed_pair_ext(EXT, NUM, base, power)
 	end
 
 	local function encode_number(val)
@@ -253,7 +252,7 @@ local function encode(root_val)
 			encode_integer(val)
 		else
 			-- Use extended encoding for all other numbers
-			write_signed_pair_ext(EXT, NUM, split_number(val))
+			encode_float(val)
 		end
 	end
 
@@ -274,7 +273,7 @@ local function encode(root_val)
 
 	local function encode_list(lst)
 		local stack = {}
-		local height
+		local height = 0
 		for i, v in ipairs(lst) do
 			height = i
 			stack[height] = v
@@ -291,9 +290,9 @@ local function encode(root_val)
 		local height = 0
 		for k, v in pairs(map) do
 			height = height + 1
-			stack[height] = v
-			height = height + 1
 			stack[height] = k
+			height = height + 1
+			stack[height] = v
 		end
 		local start = size
 		for i = height, 1, -1 do
@@ -329,6 +328,8 @@ local function encode(root_val)
 			elseif typ == "cdata" then
 				if is_integer(val) then
 					encode_integer(val)
+				elseif is_float(val) then
+					encode_float(tonumber(val))
 				else
 					encode_binary(val)
 				end
@@ -342,88 +343,7 @@ local function encode(root_val)
 	return ffi.string(buf, size)
 end
 
-local oct_lookup = {
-	[0x0] = "0000",
-	[0x1] = "0001",
-	[0x2] = "0010",
-	[0x3] = "0011",
-	[0x4] = "0100",
-	[0x5] = "0101",
-	[0x6] = "0110",
-	[0x7] = "0111",
-	[0x8] = "1000",
-	[0x9] = "1001",
-	[0xA] = "1010",
-	[0xB] = "1011",
-	[0xC] = "1100",
-	[0xD] = "1101",
-	[0xE] = "1110",
-	[0xF] = "1111",
+return {
+	split_number = split_number,
+	encode = encode,
 }
-
-local hex_lookup = {}
-for i = 0, 255 do
-	hex_lookup[i] = oct_lookup[arshift(i, 4)] .. oct_lookup[band(i, 0x0f)]
-end
-
-local function test(value)
-	print()
-	p(value)
-	local data = encode(value)
-	local bytes = {}
-	for i = 1, #data do
-		local b = data:byte(i)
-		bytes[i] = hex_lookup[b]
-	end
-	print(table.concat(bytes, " "))
-end
-
-test(0)
-test(-1)
-test(1)
-test(13)
-test(-14)
-test(14)
-test(-15)
-test(100)
-test(-100)
-test(-127)
-test(127)
-test(-128)
-test(128)
-test(-129)
-
-test(1e10)
-test(1e20)
-test(1e30)
-test(123.456)
-test(12345.6789)
-test(math.pi)
-test(math.pi * 1e300)
-test(math.pi * 1e-300)
-
-test("")
-test("Hello World")
-test("Hello World" .. string.rep("!", 100))
-
-test({ 1, 2, 3 })
-test({ name = "N2", new = true })
-
-local bin = U8Arr(8)
-bin[0] = 1
-bin[1] = 3
-bin[2] = 7
-bin[3] = 15
-bin[4] = 31
-bin[5] = 63
-bin[6] = 127
-bin[7] = 255
-test(bin)
-
-test(123ULL)
-test(123LL)
-test(1234LL)
-test(12345LL)
--- print(encode(""))
--- print(encode("Hello World"))
--- print(encode(("Hello World"):rep(10)))
