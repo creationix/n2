@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install LuaJIT
         run: |
-          apt-get update && apt-get install luajit -y
+          sudo apt-get update && sudo apt-get install luajit -y
       - name: Run Tests
         run: |
           luajit n2.test.lua
