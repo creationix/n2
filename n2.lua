@@ -7,7 +7,7 @@ local lshift = bit.lshift
 local arshift = bit.arshift
 local bxor = bit.bxor
 
-local U8 = ffi.typeof("uint8_t[?]")
+local U8Arr = ffi.typeof("uint8_t[?]")
 local U8 = ffi.typeof("uint8_t")
 local U16 = ffi.typeof("uint16_t")
 local U32 = ffi.typeof("uint32_t")
@@ -129,7 +129,7 @@ local function is_integer(val)
 end
 
 local capacity = 1024
-local buf = U8(capacity)
+local buf = U8Arr(capacity)
 
 ---@param root_val any
 ---@return string
@@ -143,7 +143,7 @@ local function encode(root_val)
 		repeat
 			capacity = capacity * 2
 		until capacity >= needed
-		local new_buf = U8(capacity)
+		local new_buf = U8Arr(capacity)
 		ffi.copy(new_buf, buf, size)
 		buf = new_buf
 	end
@@ -198,18 +198,19 @@ local function encode(root_val)
 	--- @param val integer number to write
 	--- @return integer lower 5 bits for pair
 	local function write_signed_varint(val)
-		if val >= -14 and val < 14 then
+		local num = tonumber(val)
+		if num >= -14 and val < 14 then
 			-- Small signed numbers use zigzag encoding
 			return bxor(lshift(val, 1), arshift(val, 31))
-		elseif val >= -0x80 and val < 0x80 then
+		elseif num >= -0x80 and num < 0x80 then
 			i8Box[0] = val
 			write_binary(i8Box, 1)
 			return 28
-		elseif val >= -0x8000 and val < 0x8000 then
+		elseif num >= -0x8000 and num < 0x8000 then
 			i16Box[0] = val
 			write_binary(i16Box, 2)
 			return 29
-		elseif val >= -0x80000000 and val < 0x80000000 then
+		elseif num >= -0x80000000 and num < 0x80000000 then
 			i32Box[0] = val
 			write_binary(i32Box, 4)
 			return 30
@@ -408,7 +409,7 @@ test("Hello World" .. string.rep("!", 100))
 test({ 1, 2, 3 })
 test({ name = "N2", new = true })
 
-local bin = U8(8)
+local bin = U8Arr(8)
 bin[0] = 1
 bin[1] = 3
 bin[2] = 7
@@ -420,6 +421,9 @@ bin[7] = 255
 test(bin)
 
 test(123ULL)
+test(123LL)
+test(1234LL)
+test(12345LL)
 -- print(encode(""))
 -- print(encode("Hello World"))
 -- print(encode(("Hello World"):rep(10)))
