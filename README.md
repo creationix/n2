@@ -147,9 +147,9 @@ Many of the types have advanced versions where two pairs are used for the encodi
 For decimal, split the value into an integer base and a power of 10.  Encode the base first as `NUM`, then encode the power as `EXT`
 
 ```js
-function encodeDecimal(num, pow) {
-  const len = encodeSignedPair(NUM, num)
-  return len + encodeSignedPair(EXT, pow)
+function encodeDecimal(num) {
+  const [base, pow] = decomposeDecimal(num)
+  return encodeSignedPairs(EXT, NUM, pow, base)
 }
 ```
 
@@ -165,8 +165,7 @@ function encodeStrings(vals) {
     len += encodeAny(val)
     count++
   }
-  len += encodePair(STR, len)
-  return len + encodePair(EXT, count)
+  return len + encodePairs(EXT, STR, count, len)
 }
 ```
 
@@ -182,8 +181,7 @@ function encodeBins(vals) {
     len += encodeAny(val)
     count++
   }
-  len += encodePair(BIN, len)
-  return len + encodePair(EXT, count)
+  return len + encodePairs(EXT, BIN, count, len)
 }
 ```
 
@@ -215,9 +213,7 @@ function encodeArray(arr) {
   for (let i = count - 1; i >= 0; i--) {
     encodePointer(width, start - offsets[i])
   }
-  len += encodePair(MAP, count)
-  return len + encodePair(EXT, width)
-
+  return count * width + encodePairs(EXT, MAP, count, width)
 }
 ```
 
