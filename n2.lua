@@ -134,6 +134,47 @@ enum {
 };
 ]]
 
+local function same_shape(a, b)
+  if a == b then
+    return true
+  end
+  if type(a) ~= type(b) then
+    return false
+  end
+  if type(a) ~= 'table' then
+    return false
+  end
+  local a_arr = is_array_like(a)
+  local b_arr = is_array_like(b)
+  if a_arr ~= b_arr then
+    return false
+  end
+  if a_arr then
+    local a_len = #a
+    local b_len = #b
+    if a_len ~= b_len then
+      return false
+    end
+    for i = 1, a_len do
+      if not same_shape(a[i], b[i]) then
+        return false
+      end
+    end
+  else
+    for k, v in pairs(a) do
+      if not same_shape(v, b[k]) then
+        return false
+      end
+    end
+    for k, v in pairs(b) do
+      if not same_shape(v, a[k]) then
+        return false
+      end
+    end
+  end
+  return true
+end
+
 --- Detect if a cdata is an integer
 ---@param val ffi.cdata*
 ---@return boolean
@@ -317,17 +358,21 @@ local function encode(root_val, write, aggressive)
   ---@param val any
   function encode_any(val)
     local seen_offset = seen_primitives[val]
-    if aggressive and not seen_offset then
-      for k in pairs(seen_tables) do
-        if same_shape(val, k) then
-          seen_offset = seen_tables[k]
+    local seen_cost
+    if seen_offset then
+      seen_cost = seen_costs[val]
+    elseif aggressive and type(val) == 'table' then
+      for seen_table in next, seen_tables do
+        if same_shape(val, seen_table) then
+          seen_offset = seen_tables[seen_table]
+          seen_cost = seen_costs[seen_table]
           break
         end
       end
     end
     if seen_offset then
       local delta = offset - seen_offset
-      if seen_costs[val] > varint_size(delta) + 1 then
+      if seen_cost > varint_size(delta) + 1 then
         offset = write(encode_pair(PTR, delta))
         return
       end
@@ -367,7 +412,8 @@ local function encode(root_val, write, aggressive)
           encode_map(val, iter)
         end
         if aggressive then
-          seen_tables[val] = offset - before
+          seen_tables[val] = offset
+          seen_costs[val] = offset - before
         end
       elseif typ == 'cdata' then
         if is_integer(val) then

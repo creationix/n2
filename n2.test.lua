@@ -86,14 +86,14 @@ local function to_hex(data)
   return string.format('%s', table.concat(bytes, ''))
 end
 
-local function test(value, expected)
+local function test(value, expected, ...)
   print()
   collectgarbage 'collect'
   collectgarbage 'collect'
   print(dump(value))
   collectgarbage 'collect'
   collectgarbage 'collect'
-  local data = N2.encode_to_string(value)
+  local data = N2.encode_to_string(value, ...)
   collectgarbage 'collect'
   collectgarbage 'collect'
   print(to_binary(data))
@@ -329,6 +329,16 @@ test(
     .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
     .. '2c9c' -- outer list header
 )
+test(
+  repeats,
+  '686942' -- "hi"
+    .. 'c0c1c2' -- pointers to "hi"
+    .. '86' -- { "hi", "hi", "hi", "hi" }
+    .. 'c0c1c2c3c4c5c6' -- pointers to { "hi", "hi", "hi", "hi" }
+    .. '8e', -- outer list header
+  true
+)
+
 for i = 1, 8 do
   repeats[i] = { 'hi', 'bye', 'hi', 'bye' }
 end
@@ -357,6 +367,17 @@ test(
     .. '349c' -- outer list header
 )
 
+test(
+  repeats,
+  '62796543' -- 'bye'
+    .. '686942' -- 'hi'
+    .. 'c3c1' -- pointers to 'hi' and 'bye'
+    .. '89' -- { 'hi', 'bye', 'hi', 'bye' }
+    .. 'c0c1c2c3c4c5c6' -- pointers to { 'hi', 'bye', 'hi', 'bye' }
+    .. '91', -- outer list header
+  true
+)
+
 local function readfile(path)
   local f = assert(io.open(path, 'r'))
   local data = assert(f:read '*a')
@@ -383,6 +404,6 @@ for _, filename in ipairs(samples) do
   -- print(dump(sample))
   local json2 = Tibs.encode(sample)
   print('JSON', #json2)
-  local n2 = N2.encode_to_string(sample)
+  local n2 = N2.encode_to_string(sample, true)
   print('N2', #n2)
 end
