@@ -48,3 +48,22 @@ VERSION-1
 ```
 
 Since the paths are also unchanged we can simply store the doc id when referencing a previous document.
+
+
+
+
+We can use n2 refs to compactly store these links inline.
+
+Each revision has commit-like metadata:
+
+- date
+- author
+- signature
+- message
+- parent(s)
+  - a list of caify hashes for the parent revision(s)
+  - these can include lightweight metadata about where to find the hashes if desired
+- refs
+  - a list of ref pairs (parent index + byte offset into that parent)
+- content
+  - the N2 body of this revision and it's new changes
