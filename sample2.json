@@ -1,0 +1,402 @@
+{
+  "user": {
+    "id": 1,
+    "username": "johndoe",
+    "email": "johndoe@example.com",
+    "password": "securepassword123",
+    "created_at": "2023-10-15T10:30:00Z",
+    "last_login": "2023-10-16T14:25:00Z",
+    "is_active": true,
+    "is_admin": false,
+    "preferences": {
+      "language": "en",
+      "timezone": "UTC",
+      "notifications": {
+        "email": true,
+        "sms": false,
+        "push": true
+      }
+    },
+    "roles": [
+      "user"
+    ],
+    "session_token": "abc123xyz456",
+    "avatar_url": "https://example.com/avatar.jpg"
+  },
+  "orders": [
+    {
+      "order_id": "ORD123456",
+      "user_id": 1,
+      "product_id": "PROD789012",
+      "quantity": 2,
+      "total_amount": 99.99,
+      "order_date": "2023-10-15T10:30:00Z",
+      "status": "completed",
+      "shipping_address": {
+        "street": "123 Main St",
+        "city": "Anytown",
+        "state": "CA",
+        "zip_code": "98765",
+        "country": "USA"
+      },
+      "billing_address": {
+        "street": "123 Main St",
+        "city": "Anytown",
+        "state": "CA",
+        "zip_code": "98765",
+        "country": "USA"
+      },
+      "payment_method": "credit_card",
+      "payment_details": {
+        "card_number": "4111111111111111",
+        "expiration_date": "12/25",
+        "cvv": "123"
+      }
+    },
+    {
+      "order_id": "ORD654321",
+      "user_id": 1,
+      "product_id": "PROD012345",
+      "quantity": 1,
+      "total_amount": 49.99,
+      "order_date": "2023-10-16T14:25:00Z",
+      "status": "processing",
+      "shipping_address": {
+        "street": "456 Oak St",
+        "city": "Othertown",
+        "state": "NY",
+        "zip_code": "12345",
+        "country": "USA"
+      },
+      "billing_address": {
+        "street": "456 Oak St",
+        "city": "Othertown",
+        "state": "NY",
+        "zip_code": "12345",
+        "country": "USA"
+      },
+      "payment_method": "paypal",
+      "payment_details": {
+        "paypal_email": "johndoe@example.com",
+        "transaction_id": "TXN789012"
+      }
+    }
+  ],
+  "products": [
+    {
+      "product_id": "PROD789012",
+      "name": "Wireless Bluetooth Headphones",
+      "description": "High-quality wireless headphones with noise cancellation.",
+      "price": 99.99,
+      "stock": 50,
+      "category": "electronics",
+      "created_at": "2023-10-15T10:30:00Z",
+      "updated_at": "2023-10-15T10:30:00Z",
+      "image_url": "https://example.com/images/headphones.jpg"
+    },
+    {
+      "product_id": "PROD012345",
+      "name": "Smart Fitness Tracker",
+      "description": "Track your fitness goals with this smart tracker.",
+      "price": 49.99,
+      "stock": 100,
+      "category": "electronics",
+      "created_at": "2023-10-16T14:25:00Z",
+      "updated_at": "2023-10-16T14:25:00Z",
+      "image_url": "https://example.com/images/fitness-tracker.jpg"
+    },
+    {
+      "product_id": "PROD543210",
+      "name": "Eco-Friendly Water Bottle",
+      "description": "Stay hydrated with this reusable and eco-friendly water bottle.",
+      "price": 19.99,
+      "stock": 200,
+      "category": "home",
+      "created_at": "2023-10-17T09:15:00Z",
+      "updated_at": "2023-10-17T09:15:00Z",
+      "image_url": "https://example.com/images/water-bottle.jpg"
+    }
+  ],
+  "categories": [
+    {
+      "category_id": 1,
+      "name": "electronics",
+      "description": "Products related to electronic devices and gadgets.",
+      "created_at": "2023-10-15T10:30:00Z",
+      "updated_at": "2023-10-15T10:30:00Z"
+    },
+    {
+      "category_id": 2,
+      "name": "home",
+      "description": "Products related to home and lifestyle items.",
+      "created_at": "2023-10-15T10:30:00Z",
+      "updated_at": "2023-10-15T10:30:00Z"
+    },
+    {
+      "category_id": 3,
+      "name": "books",
+      "description": "Products related to books and reading materials.",
+      "created_at": "2023-10-15T10:30:00Z",
+      "updated_at": "2023-10-15T10:30:00Z"
+    }
+  ],
+  "reviews": [
+    {
+      "review_id": 1,
+      "product_id": "PROD789012",
+      "user_id": 1,
+      "rating": 5,
+      "comment": "Excellent product, great sound quality and comfort.",
+      "created_at": "2023-10-15T10:30:00Z"
+    },
+    {
+      "review_id": 2,
+      "product_id": "PROD012345",
+      "user_id": 1,
+      "rating": 4,
+      "comment": "Good tracker, but the battery life could be better.",
+      "created_at": "2023-10-16T14:25:00Z"
+    },
+    {
+      "review_id": 3,
+      "product_id": "PROD543210",
+      "user_id": 1,
+      "rating": 5,
+      "comment": "Highly recommend this eco-friendly water bottle!",
+      "created_at": "2023-10-17T09:15:00Z"
+    }
+  ],
+  "settings": {
+    "site": {
+      "name": "EcoShop",
+      "description": "A sustainable online store for eco-friendly products.",
+      "logo_url": "https://example.com/images/ecoshop-logo.png",
+      "favicon_url": "https://example.com/images/ecoshop-favicon.ico"
+    },
+    "features": {
+      "enable_reviews": true,
+      "enable_wishlist": true,
+      "enable_guest_checkout": false
+    },
+    "payment_gateways": [
+      "paypal",
+      "stripe",
+      "credit_card"
+    ],
+    "shipping_options": {
+      "standard": {
+        "cost": 5.99,
+        "delivery_time": "5-7 business days"
+      },
+      "express": {
+        "cost": 12.99,
+        "delivery_time": "1-3 business days"
+      }
+    },
+    "currency": "USD",
+    "language": "en",
+    "timezone": "UTC"
+  },
+  "logs": [
+    {
+      "log_id": 1,
+      "user_id": 1,
+      "action": "login",
+      "timestamp": "2023-10-15T10:30:00Z",
+      "ip_address": "192.168.1.1"
+    },
+    {
+      "log_id": 2,
+      "user_id": 1,
+      "action": "order_placed",
+      "timestamp": "2023-10-15T10:30:00Z",
+      "ip_address": "192.168.1.1"
+    },
+    {
+      "log_id": 3,
+      "user_id": 1,
+      "action": "product_viewed",
+      "timestamp": "2023-10-16T14:25:00Z",
+      "ip_address": "192.168.1.1"
+    },
+    {
+      "log_id": 4,
+      "user_id": 1,
+      "action": "order_updated",
+      "timestamp": "2023-10-16T14:25:00Z",
+      "ip_address": "192.168.1.1"
+    },
+    {
+      "log_id": 5,
+      "user_id": 1,
+      "action": "product_review_submitted",
+      "timestamp": "2023-10-17T09:15:00Z",
+      "ip_address": "192.168.1.1"
+    }
+  ],
+  "statistics": {
+    "total_users": 1500,
+    "total_orders": 2000,
+    "total_products": 500,
+    "total_views": 100000,
+    "last_month_sales": 250000.00,
+    "last_month_orders": 150,
+    "last_month_users": 200
+  },
+  "cache": {
+    "user_profile": {
+      "id": 1,
+      "username": "johndoe",
+      "email": "johndoe@example.com",
+      "last_login": "2023-10-16T14:25:00Z"
+    },
+    "product_catalog": {
+      "electronics": [
+        "PROD789012",
+        "PROD012345"
+      ],
+      "home": [
+        "PROD543210"
+      ],
+      "books": []
+    },
+    "recent_activity": [
+      {
+        "user_id": 1,
+        "action": "login",
+        "timestamp": "2023-10-16T14:25:00Z"
+      },
+      {
+        "user_id": 1,
+        "action": "order_placed",
+        "timestamp": "2023-10-15T10:30:00Z"
+      }
+    ]
+  },
+  "analytics": {
+    "user_activity": {
+      "total_logins": 5,
+      "last_login": "2023-10-16T14:25:00Z",
+      "active_days": 7
+    },
+    "order_performance": {
+      "total_orders": 2,
+      "average_order_value": 74.99,
+      "order_completion_rate": 1.0
+    },
+    "product_popularity": {
+      "top_products": [
+        {
+          "product_id": "PROD789012",
+          "views": 150,
+          "sales": 2
+        },
+        {
+          "product_id": "PROD012345",
+          "views": 100,
+          "sales": 1
+        },
+        {
+          "product_id": "PROD543210",
+          "views": 80,
+          "sales": 0
+        }
+      ]
+    }
+  },
+  "security": {
+    "encryption": {
+      "algorithm": "AES-256",
+      "key_length": 256
+    },
+    "rate_limiting": {
+      "max_requests_per_minute": 100,
+      "ip_based": true
+    },
+    "access_control": {
+      "roles": {
+        "user": {
+          "allowed_actions": [
+            "view_profile",
+            "place_order",
+            "view_order_history"
+          ]
+        },
+        "admin": {
+          "allowed_actions": [
+            "view_all_users",
+            "manage_products",
+            "view_logs"
+          ]
+        }
+      }
+    },
+    "audit_logs": [
+      {
+        "log_id": 1,
+        "user_id": 1,
+        "action": "login",
+        "timestamp": "2023-10-15T10:30:00Z",
+        "ip_address": "192.168.1.1"
+      },
+      {
+        "log_id": 2,
+        "user_id": 1,
+        "action": "order_placed",
+        "timestamp": "2023-10-15T10:30:00Z",
+        "ip_address": "192.168.1.1"
+      }
+    ]
+  },
+  "system": {
+    "environment": "production",
+    "version": "1.0.0",
+    "uptime": "10 days",
+    "last_updated": "2023-10-17T09:15:00Z"
+  },
+  "notifications": {
+    "user": {
+      "email": {
+        "enabled": true,
+        "template": "Dear {{username}}, your order {{order_id}} has been {{status}}."
+      },
+      "sms": {
+        "enabled": false,
+        "template": "Your order {{order_id}} has been {{status}}."
+      },
+      "push": {
+        "enabled": true,
+        "template": "New update for your order {{order_id}}: {{status}}"
+      }
+    },
+    "system": {
+      "email": {
+        "enabled": true,
+        "template": "System maintenance is scheduled for {{date}}."
+      },
+      "sms": {
+        "enabled": false,
+        "template": "System maintenance is scheduled for {{date}}."
+      }
+    }
+  },
+  "search": {
+    "index": {
+      "user": {
+        "username": "johndoe",
+        "email": "johndoe@example.com"
+      },
+      "product": {
+        "name": "Wireless Bluetooth Headphones",
+        "description": "High-quality wireless headphones with noise cancellation."
+      }
+    },
+    "query": {
+      "recent_queries": [
+        "wireless headphones",
+        "fitness tracker",
+        "eco-friendly water bottle"
+      ]
+    }
+  }
+}

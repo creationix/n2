@@ -1,0 +1,75 @@
+{
+  "feed": {
+    "id": "social_feed_12345",
+    "user": {
+      "id": "user_67890",
+      "username": "travel_explorer",
+      "display_name": "Alex Johnson",
+      "profile_picture_url": "https://example.com/images/alex_photo.jpg",
+      "bio": "Wandering the world, one adventure at a time.  Coffee addict ☕",
+      "followers_count": 12543,
+      "following_count": 876
+    },
+    "timestamp": "2024-10-27T10:30:00Z",
+    "post_type": "image",
+    "content": {
+      "media": [
+        {
+          "id": "image_11223",
+          "url": "https://example.com/images/mountains_sunset.jpg",
+          "alt_text": "Spectacular sunset over the mountains",
+          "width": 1920,
+          "height": 1080,
+          "is_video": false
+        }
+      ],
+      "caption": "Lost in the beauty of the Himalayas!  This view took my breath away. ⛰️ #himalayas #travel #adventure #sunset #mountains #nepal"
+    },
+    "interactions": {
+      "likes": [
+        "user_11223",
+        "user_44556",
+        "user_78901",
+        "user_22334"
+      ],
+      "comments": [
+        {
+          "id": "comment_55667",
+          "user_id": "user_88990",
+          "username": "wanderlust_soul",
+          "text": "Absolutely stunning! Where were you when this happened?",
+          "timestamp": "2024-10-27T10:45:00Z"
+        },
+        {
+          "id": "comment_88990",
+          "user_id": "user_11223",
+          "username": "travel_explorer",
+          "text": "Feeling incredibly lucky to witness this.",
+          "timestamp": "2024-10-27T10:50:00Z"
+        }
+      ],
+      "reposts": [
+        {
+          "user_id": "user_33445",
+          "username": "eco_travel_buzz",
+          "timestamp": "2024-10-27T11:15:00Z",
+          "comment": "Amazing! This highlights the importance of responsible tourism. #ecotourism #responsibleTravel"
+        }
+      ],
+      "shares": 50
+    },
+    "tags": [
+      "travel",
+      "adventure",
+      "nepal",
+      "mountains",
+      "sunset",
+      "himalayas"
+    ],
+    "location": {
+      "latitude": 28.64482,
+      "longitude": 82.91436,
+      "name": "Annapurna Base Camp, Nepal"
+    }
+  }
+}

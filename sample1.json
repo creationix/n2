@@ -1,0 +1,189 @@
+{
+  "user": {
+    "id": "123456",
+    "username": "john_doe",
+    "email": "john.doe@example.com",
+    "created_at": "2023-01-15T14:30:00Z",
+    "last_login": "2023-04-05T09:15:00Z",
+    "preferences": {
+      "theme": "dark",
+      "language": "en",
+      "notifications": {
+        "email": true,
+        "push": false,
+        "sms": true
+      },
+      "timezone": "UTC"
+    },
+    "roles": [
+      "user",
+      "admin"
+    ],
+    "status": "active"
+  },
+  "session": {
+    "token": "abc123xyz789",
+    "expires_at": "2023-04-15T14:30:00Z",
+    "user_id": "123456",
+    "device": {
+      "type": "mobile",
+      "os": "iOS 15.4",
+      "browser": "Safari 14.5"
+    },
+    "location": {
+      "ip": "192.0.2.1",
+      "country": "United States",
+      "region": "California",
+      "city": "San Francisco",
+      "latitude": 37.7749,
+      "longitude": -122.4194
+    },
+    "metadata": {
+      "referrer": "https://example.com/dashboard",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Safari/604.1"
+    }
+  },
+  "application": {
+    "name": "MyWebApp",
+    "version": "1.2.3",
+    "build_date": "2023-04-05T14:30:00Z",
+    "environment": "production",
+    "config": {
+      "database": {
+        "host": "db.example.com",
+        "port": 3306,
+        "username": "app_user",
+        "password": "secure_password123",
+        "database": "mywebapp_db",
+        "ssl": true
+      },
+      "cache": {
+        "enabled": true,
+        "type": "redis",
+        "host": "cache.example.com",
+        "port": 6379,
+        "password": "cache_password456"
+      },
+      "logging": {
+        "level": "info",
+        "file": "/var/log/mywebapp.log",
+        "console": true
+      },
+      "auth": {
+        "strategy": "JWT",
+        "secret": "supersecretkey789",
+        "token_expiration": "2h"
+      }
+    },
+    "services": {
+      "api": {
+        "base_url": "https://api.mywebapp.com/v1",
+        "timeout": 30000
+      },
+      "frontend": {
+        "base_url": "https://frontend.mywebapp.com",
+        "version": "2.1.0"
+      },
+      "payment": {
+        "provider": "Stripe",
+        "api_key": "sk_test_1234567890abcdef1234567890abcdef",
+        "webhook_url": "https://webhooks.mywebapp.com/stripe"
+      }
+    }
+  },
+  "logs": {
+    "access": [
+      {
+        "timestamp": "2023-04-05T14:30:00Z",
+        "ip": "192.0.2.1",
+        "method": "GET",
+        "path": "/api/v1/users",
+        "status": 200,
+        "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Safari/604.1"
+      },
+      {
+        "timestamp": "2023-04-05T14:35:00Z",
+        "ip": "192.0.2.2",
+        "method": "POST",
+        "path": "/api/v1/login",
+        "status": 201,
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/605.1.15"
+      }
+    ],
+    "error": [
+      {
+        "timestamp": "2023-04-05T14:40:00Z",
+        "level": "error",
+        "message": "Database connection failed",
+        "stack_trace": "Error: connect ECONNREFUSED 127.0.0.1:3306\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net: 1494: 14)\n    at Object.<anonymous> (/var/www/mywebapp/app.js: 45: 15)",
+        "context": {
+          "service": "api",
+          "module": "database",
+          "request_id": "req_123456"
+        }
+      },
+      {
+        "timestamp": "2023-04-05T14:45:00Z",
+        "level": "warning",
+        "message": "Request timeout",
+        "context": {
+          "service": "frontend",
+          "request_id": "req_789012"
+        }
+      }
+    ]
+  },
+  "metrics": {
+    "cpu": {
+      "usage": 75.2,
+      "load": 1.2
+    },
+    "memory": {
+      "used": 2048,
+      "free": 1024,
+      "total": 3072,
+      "unit": "MB"
+    },
+    "disk": {
+      "used": 50000,
+      "free": 10000,
+      "total": 60000,
+      "unit": "GB"
+    },
+    "network": {
+      "inbound": 150,
+      "outbound": 200,
+      "unit": "MB/s"
+    }
+  },
+  "features": {
+    "enabled": [
+      "user_authentication",
+      "role_based_access",
+      "data_export",
+      "real_time_notifications"
+    ],
+    "disabled": [
+      "beta_feature_1",
+      "beta_feature_2"
+    ]
+  },
+  "settings": {
+    "general": {
+      "site_title": "MyWebApp",
+      "site_description": "A modern web application for managing user data and interactions",
+      "maintenance_mode": false
+    },
+    "security": {
+      "ssl_enabled": true,
+      "hsts_enabled": true,
+      "xss_protection": true,
+      "content_security_policy": "default-src 'self'; script-src 'self' 'unsafe-inline';"
+    },
+    "performance": {
+      "cache_enabled": true,
+      "compression": true,
+      "max_connections": 1000
+    }
+  }
+}

@@ -1,0 +1,692 @@
+{
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "description": "Root route for the SaaS application. Redirects to the dashboard for authenticated users.",
+      "redirect": "/dashboard",
+      "headers": {
+        "Content-Type": "text/html"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard",
+      "description": "Main dashboard for authenticated users, displaying user statistics and recent activity.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/login",
+      "description": "Login page for unauthenticated users.",
+      "headers": {
+        "Content-Type": "text/html"
+      },
+      "conditional": {
+        "authentication": "optional"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/login",
+      "description": "Authenticate user and create session.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "optional"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/logout",
+      "description": "Logout route to terminate the user's session.",
+      "headers": {
+        "Content-Type": "text/html"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "description": "List of all users in the system (admin only).",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/users/:id",
+      "description": "Retrieve details for a specific user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/users",
+      "description": "Create a new user in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/users/:id",
+      "description": "Update details for a specific user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/:id",
+      "description": "Delete a user from the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/settings",
+      "description": "User settings page for authenticated users.",
+      "headers": {
+        "Content-Type": "text/html"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/settings",
+      "description": "Update user settings, such as theme or notification preferences.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/data",
+      "description": "Fetch data for the dashboard, such as user activity and metrics.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports",
+      "description": "Retrieve reports and analytics for the application.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics",
+      "description": "Access to analytics and statistics for the application.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications",
+      "description": "Retrieve notifications for the user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications",
+      "description": "Send a new notification to the user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions",
+      "description": "List of user sessions for the current user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/sessions",
+      "description": "Create a new session for the user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "description": "Health check endpoint for the application.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "optional"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit",
+      "description": "Retrieve audit logs for the application.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/cache",
+      "description": "Access to cache management and purging.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/logs",
+      "description": "Access to application logs and error tracking.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/logs",
+      "description": "Submit logs or errors for the application.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/backup",
+      "description": "Access to backup and restore functionality.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/backup",
+      "description": "Trigger a backup of the application data.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/monitoring",
+      "description": "Access to system monitoring and performance metrics.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/metrics",
+      "description": "Retrieve system metrics and performance data.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/permissions",
+      "description": "Access to user and role permissions management.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/permissions",
+      "description": "Create or update permissions for users or roles.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/roles",
+      "description": "List of available roles in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/roles",
+      "description": "Create a new role in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/roles/:id",
+      "description": "Update an existing role in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/roles/:id",
+      "description": "Delete a role from the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "description": "List of all users in the system (admin only).",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/:id",
+      "description": "Retrieve details for a specific user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/users",
+      "description": "Create a new user in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/:id",
+      "description": "Update details for a specific user.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/users/:id",
+      "description": "Delete a user from the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizations",
+      "description": "List of organizations in the system (admin only).",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizations/:id",
+      "description": "Retrieve details for a specific organization.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/organizations",
+      "description": "Create a new organization in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/organizations/:id",
+      "description": "Update details for a specific organization.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/organizations/:id",
+      "description": "Delete an organization from the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teams",
+      "description": "List of teams in the system (admin only).",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teams/:id",
+      "description": "Retrieve details for a specific team.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/teams",
+      "description": "Create a new team in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/teams/:id",
+      "description": "Update details for a specific team.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/teams/:id",
+      "description": "Delete a team from the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/roles",
+      "description": "List of available roles in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/roles/:id",
+      "description": "Retrieve details for a specific role.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/roles",
+      "description": "Create a new role in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/roles/:id",
+      "description": "Update an existing role in the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/roles/:id",
+      "description": "Delete a role from the system.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/permissions",
+      "description": "Access to user and role permissions management.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/permissions",
+      "description": "Create or update permissions for users or roles.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/audit",
+      "description": "Retrieve audit logs for the application.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/cache",
+      "description": "Access to cache management and purging.",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "conditional": {
+        "authentication": "required",
+        "role": "admin"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/logs",
+      "description": "Access to application logs and error tracking.",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  ]
+}

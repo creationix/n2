@@ -1,0 +1,343 @@
+{
+  "data": {
+    "nestedObject1": {
+      "array1": [
+        {
+          "id": 1234567890123456789,
+          "name": "Element 1",
+          "subArray": [
+            {
+              "id": 9876543210987654321,
+              "value": "Nested Value 1"
+            },
+            {
+              "id": 9876543210987654322,
+              "value": "Nested Value 2"
+            },
+            {
+              "id": 9876543210987654323,
+              "value": "Nested Value 3"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456790,
+          "name": "Element 2",
+          "subArray": [
+            {
+              "id": 9876543210987654324,
+              "value": "Nested Value 4"
+            },
+            {
+              "id": 9876543210987654325,
+              "value": "Nested Value 5"
+            },
+            {
+              "id": 9876543210987654326,
+              "value": "Nested Value 6"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456791,
+          "name": "Element 3",
+          "subArray": [
+            {
+              "id": 9876543210987654327,
+              "value": "Nested Value 7"
+            },
+            {
+              "id": 9876543210987654328,
+              "value": "Nested Value 8"
+            },
+            {
+              "9876543210987654329": "Nested Value 9"
+            }
+          ]
+        }
+      ],
+      "array2": [
+        {
+          "id": 1234567890123456792,
+          "name": "Element 4",
+          "subArray": [
+            {
+              "id": 9876543210987654330,
+              "value": "Nested Value 10"
+            },
+            {
+              "id": 9876543210987654331,
+              "value": "Nested Value 11"
+            },
+            {
+              "id": 9876543210987654332,
+              "value": "Nested Value 12"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456793,
+          "name": "Element 5",
+          "subArray": [
+            {
+              "id": 9876543210987654333,
+              "value": "Nested Value 13"
+            },
+            {
+              "id": 9876543210987654334,
+              "value": "Nested Value 14"
+            },
+            {
+              "id": 9876543210987654335,
+              "value": "Nested Value 15"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456794,
+          "name": "Element 6",
+          "subArray": [
+            {
+              "id": 9876543210987654336,
+              "value": "Nested Value 16"
+            },
+            {
+              "id": 9876543210987654337,
+              "value": "Nested Value 17"
+            },
+            {
+              "id": 9876543210987654338,
+              "value": "Nested Value 18"
+            }
+          ]
+        }
+      ],
+      "array3": [
+        {
+          "id": 1234567890123456795,
+          "name": "Element 7",
+          "subArray": [
+            {
+              "id": 9876543210987654339,
+              "value": "Nested Value 19"
+            },
+            {
+              "id": 9876543210987654340,
+              "value": "Nested Value 20"
+            },
+            {
+              "id": 9876543210987654341,
+              "value": "Nested Value 21"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456796,
+          "name": "Element 8",
+          "subArray": [
+            {
+              "id": 9876543210987654342,
+              "value": "Nested Value 22"
+            },
+            {
+              "id": 9876543210987654343,
+              "value": "Nested Value 23"
+            },
+            {
+              "id": 9876543210987654344,
+              "value": "Nested Value 24"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456797,
+          "name": "Element 9",
+          "subArray": [
+            {
+              "id": 9876543210987654345,
+              "value": "Nested Value 25"
+            },
+            {
+              "id": 9876543210987654346,
+              "value": "Nested Value 26"
+            },
+            {
+              "id": 9876543210987654347,
+              "value": "Nested Value 27"
+            }
+          ]
+        }
+      ]
+    },
+    "nestedObject2": {
+      "array1": [
+        {
+          "id": 1234567890123456798,
+          "name": "Element 10",
+          "subArray": [
+            {
+              "id": 9876543210987654348,
+              "value": "Nested Value 28"
+            },
+            {
+              "id": 9876543210987654349,
+              "value": "Nested Value 29"
+            },
+            {
+              "id": 9876543210987654350,
+              "value": "Nested Value 30"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456799,
+          "name": "Element 11",
+          "subArray": [
+            {
+              "id": 9876543210987654351,
+              "value": "Nested Value 31"
+            },
+            {
+              "id": 9876543210987654352,
+              "value": "Nested Value 32"
+            },
+            {
+              "id": 9876543210987654353,
+              "value": "Nested Value 33"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456800,
+          "name": "Element 12",
+          "subArray": [
+            {
+              "id": 9876543210987654354,
+              "value": "Nested Value 34"
+            },
+            {
+              "id": 9876543210987654355,
+              "value": "Nested Value 35"
+            },
+            {
+              "id": 9876543210987654356,
+              "value": "Nested Value 36"
+            }
+          ]
+        }
+      ],
+      "array2": [
+        {
+          "id": 1234567890123456801,
+          "name": "Element 13",
+          "subArray": [
+            {
+              "id": 9876543210987654357,
+              "value": "Nested Value 37"
+            },
+            {
+              "id": 9876543210987654358,
+              "value": "Nested Value 38"
+            },
+            {
+              "id": 9876543210987654359,
+              "value": "Nested Value 39"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456802,
+          "name": "Element 14",
+          "subArray": [
+            {
+              "id": 9876543210987654360,
+              "value": "Nested Value 40"
+            },
+            {
+              "id": 9876543210987654361,
+              "value": "Nested Value 41"
+            },
+            {
+              "id": 9876543210987654362,
+              "value": "Nested Value 42"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456803,
+          "name": "Element 15",
+          "subArray": [
+            {
+              "id": 9876543210987654363,
+              "value": "Nested Value 43"
+            },
+            {
+              "id": 9876543210987654364,
+              "value": "Nested Value 44"
+            },
+            {
+              "id": 9876543210987654365,
+              "value": "Nested Value 45"
+            }
+          ]
+        }
+      ],
+      "array3": [
+        {
+          "id": 1234567890123456804,
+          "name": "Element 16",
+          "subArray": [
+            {
+              "id": 9876543210987654366,
+              "value": "Nested Value 46"
+            },
+            {
+              "id": 9876543210987654367,
+              "value": "Nested Value 47"
+            },
+            {
+              "id": 9876543210987654368,
+              "value": "Nested Value 48"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456805,
+          "name": "Element 17",
+          "subArray": [
+            {
+              "id": 9876543210987654369,
+              "value": "Nested Value 49"
+            },
+            {
+              "id": 9876543210987654370,
+              "value": "Nested Value 50"
+            },
+            {
+              "id": 9876543210987654371,
+              "value": "Nested Value 51"
+            }
+          ]
+        },
+        {
+          "id": 1234567890123456806,
+          "name": "Element 18",
+          "subArray": [
+            {
+              "id": 9876543210987654372,
+              "value": "Nested Value 52"
+            },
+            {
+              "id": 9876543210987654373,
+              "value": "Nested Value 53"
+            },
+            {
+              "id": 9876543210987654374,
+              "value": "Nested Value 54"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

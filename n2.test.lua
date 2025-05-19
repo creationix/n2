@@ -1,4 +1,5 @@
 local N2 = require 'n2'
+local Tibs = require 'tibs'
 local dump = require 'dump'
 
 local bit = require 'bit'
@@ -146,6 +147,14 @@ test(127, '7f1c')
 test(-128, '801c')
 test(128, '80001d')
 test(-129, '7fff1d')
+test(0x7fff, 'ff7f1d')
+test(-0x8000, '00801d')
+test(0x8000, '008000001e')
+test(0x7fffffff, 'ffffff7f1e')
+test(-0x80000000, '000000801e')
+test(0x80000000, '00000080000000001f')
+test(0x7fffffffffffffffLL, 'ffffffffffffff7f1f')
+test(-0x8000000000000000LL, '00000000000000801f')
 
 test(1e10, '1422')
 test(1e20, '141c22')
@@ -347,3 +356,33 @@ test(
     .. '86' -- { "hi", "bye", "hi", "bye" }
     .. '349c' -- outer list header
 )
+
+local function readfile(path)
+  local f = assert(io.open(path, 'r'))
+  local data = assert(f:read '*a')
+  f:close()
+  return data
+end
+
+local samples = {
+  'sample1.json',
+  'sample2.json',
+  'sample3.json',
+  'sample4.json',
+  'sample5.json',
+  'sample6.json',
+  'sample7.json',
+  'sample8.json',
+  'sample9.json',
+}
+
+for _, filename in ipairs(samples) do
+  print('Testing', filename)
+  local json = readfile(filename)
+  local sample = Tibs.decode(json, filename)
+  -- print(dump(sample))
+  local json2 = Tibs.encode(sample)
+  print('JSON', #json2)
+  local n2 = N2.encode_to_string(sample)
+  print('N2', #n2)
+end

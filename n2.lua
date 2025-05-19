@@ -1,14 +1,16 @@
+local bit = require 'bit'
+local dump = require 'dump'
 local ffi = require 'ffi'
+
+local bor = bit.bor
+local lshift = bit.lshift
+local arshift = bit.arshift
+local bxor = bit.bxor
 local cast = ffi.cast
 local sizeof = ffi.sizeof
 local copy = ffi.copy
 local istype = ffi.istype
 local ffi_string = ffi.string
-local bit = require 'bit'
-local bor = bit.bor
-local lshift = bit.lshift
-local arshift = bit.arshift
-local bxor = bit.bxor
 
 local U8Arr = ffi.typeof 'uint8_t[?]'
 local U8 = ffi.typeof 'uint8_t'
@@ -183,13 +185,13 @@ local function encode_varint(offset, val)
     varintBuffer[offset] = val
     return offset + 1, 28
   elseif num < 0x10000 then
-    cast(varintBuffer + offset, u16Ptr)[0] = val
+    cast(u16Ptr, varintBuffer + offset)[0] = val
     return offset + 2, 29
   elseif num < 0x100000000 then
-    cast(varintBuffer + offset, u32Ptr)[0] = val
+    cast(u32Ptr, varintBuffer + offset)[0] = val
     return offset + 4, 30
   else
-    cast(varintBuffer + offset, u64Ptr)[0] = val
+    cast(u64Ptr, varintBuffer + offset)[0] = val
     return offset + 8, 31
   end
 end
@@ -421,7 +423,7 @@ end
 ---@param root_val any
 ---@param agressive? boolean
 local function encode_to_string(root_val, agressive)
-  assert(size == 0, 'encode_to_string is not reentrant')
+  assert(size == 0)
   local total_bytes_written = encode(root_val, buffered_write, agressive)
   size = 0
   return ffi_string(buf, total_bytes_written)
