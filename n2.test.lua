@@ -103,7 +103,9 @@ end
 function _G.pairs(tab)
   -- Use the custom __pairs metamethod if it exists
   local mt = getmetatable(tab)
-  if mt and mt.__pairs then return mt.__pairs(tab) end
+  if mt and mt.__pairs then
+    return mt.__pairs(tab)
+  end
 
   local keys = {}
   local size = 0
@@ -116,7 +118,9 @@ function _G.pairs(tab)
   return function()
     i = i + 1
     local k = keys[i]
-    if k then return k, tab[k] end
+    if k then
+      return k, tab[k]
+    end
   end
 end
 
@@ -250,14 +254,21 @@ local function five_squares()
   local i = 0
   return function()
     i = i + 1
-    if i < 5 then return i, i * i end
+    if i < 5 then
+      return i, i * i
+    end
   end
 end
 
 -- [ 1, 4, 9, 16]
+test(setmetatable({}, { __pairs = five_squares }), '101c12080285')
 test(setmetatable({}, { __ipairs = five_squares }), '101c12080285')
 -- { 1: 1, 2: 4, 3: 9, 4: 16 }
-test(setmetatable({}, { __pairs = five_squares }), '101c08120608040202a9')
+test(setmetatable({}, { __pairs = five_squares, __is_array_like = false }), '101c08120608040202a9')
 
--- test({true=true}, "e16e6577434e32426e616d6544ad")
 test({ ['true'] = true }, 'e17472756544a6')
+
+test({
+  ['Content-Type'] = 'application/json',
+  ['Content-Length'] = 123,
+}, '6170706c69636174696f6e2f6a736f6e50436f6e74656e742d547970654c7b1c436f6e74656e742d4c656e6774684e2fbc')

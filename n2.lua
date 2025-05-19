@@ -43,7 +43,9 @@ local FALSE = 2
 -- Given a double value, split it into a base and power of 10.
 -- For example, 1234.5678 would be split into 12345678 and -4.
 local function split_number(val)
-  if val == 0 then return 0, 0 end
+  if val == 0 then
+    return 0, 0
+  end
   local str = tostring(val)
   -- Check if the number is in scientific notation
   if str:find 'e' then
@@ -82,21 +84,25 @@ end
 ---@param val table
 local function is_array_like(val)
   local mt = getmetatable(val)
+  local iter = pairs
   if mt then
-    if mt.__is_array_like ~= nil then
-      return mt.__is_array_like
+    if mt.__pairs then
+      iter = mt.__pairs
     elseif mt.__ipairs then
-      return true
-    elseif mt.__pairs then
-      return false
+      return true, mt.__ipairs
+    end
+    if mt.__is_array_like ~= nil then
+      return mt.__is_array_like, iter
     end
   end
   local i = 0
-  for k in pairs(val) do
+  for k in iter(val) do
     i = i + 1
-    if k ~= i then return false end
+    if k ~= i then
+      return false, iter
+    end
   end
-  return true
+  return true, iter
 end
 
 --- Detect if a cdata is an integer
@@ -129,7 +135,9 @@ local function encode(root_val)
   local size = 0
 
   local function ensure_capacity(needed)
-    if needed <= capacity then return end
+    if needed <= capacity then
+      return
+    end
     repeat
       capacity = capacity * 2
     until capacity >= needed
@@ -237,7 +245,9 @@ local function encode(root_val)
 
   local function encode_float(val)
     local base, power = split_number(val)
-    if power >= 0 and power < 10 then return encode_integer(val) end
+    if power >= 0 and power < 10 then
+      return encode_integer(val)
+    end
     write_signed_pair_ext(EXT, NUM, base, power)
   end
 
@@ -266,11 +276,9 @@ local function encode(root_val)
 
   local encode_any
 
-  local function encode_list(lst)
+  local function encode_list(lst, iter)
     local stack = {}
     local height = 0
-    local mt = getmetatable(lst)
-    local iter = mt and mt.__ipairs or mt.__pairs or ipairs
     for i, v in iter(lst) do
       height = i
       stack[height] = v
@@ -282,11 +290,9 @@ local function encode(root_val)
     write_pair(LST, size - start)
   end
 
-  local function encode_map(map)
+  local function encode_map(map, iter)
     local stack = {}
     local height = 0
-    local mt = getmetatable(map)
-    local iter = mt and mt.__pairs or pairs
     for k, v in iter(map) do
       height = height + 1
       stack[height] = k
@@ -301,10 +307,11 @@ local function encode(root_val)
   end
 
   local function encode_table(val)
-    if is_array_like(val) then
-      encode_list(val)
+    local is_array, iter = is_array_like(val)
+    if is_array then
+      encode_list(val, iter)
     else
-      encode_map(val)
+      encode_map(val, iter)
     end
   end
 
