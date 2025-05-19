@@ -76,7 +76,7 @@ function encodeBinary(bin) {
 
 ### LST (len) - List
 
-Lists are encoded by first writing the items in reverse order followed by an unsigned tag pair for the total byte length of the children.
+Lists are encoded by first writing the items in reverse order followed by a tag pair for the total byte length of the children.
 
 ```js
 function encodeList(lst) {
@@ -105,7 +105,7 @@ function encodeMap(map) {
 
 ### PTR (offset) - Pointer
 
-Pointers are simply byte offsets to other values, they are encoded as unsigned integer offsets (calculated before writing value)
+Pointers are simply byte offsets to other values, they are encoded an integer offsets (calculated before writing value)
 
 ```js
 function encodePointer(target) {
@@ -142,18 +142,18 @@ function encodeAny(val) {
 
 Many of the types have advanced versions where two pairs are used for the encoding.
 
-#### EXT (signed pow) NUM (base) - Decimal
+#### EXT NUM (signed base, signed pow) - Decimal
 
 For decimal, split the value into an integer base and a power of 10.  Encode the base first as `NUM`, then encode the power as `EXT`
 
 ```js
 function encodeDecimal(num) {
   const [base, pow] = decomposeDecimal(num)
-  return encodeSignedPairs(EXT, NUM, pow, base)
+  return encodeSignedPairs(EXT, NUM, base, pow)
 }
 ```
 
-#### EXT (count) STR (len) - String Chain
+#### EXT STR (len, count) - String Chain
 
 Advanced encoders may wish to deduplicate common substrings, the string chain allows n values to be combined into a single string.  You can mix strings and refs to string (and recursive string chains)
 
@@ -165,11 +165,11 @@ function encodeStrings(vals) {
     len += encodeAny(val)
     count++
   }
-  return len + encodePairs(EXT, STR, count, len)
+  return len + encodePairs(EXT, STR, len, count)
 }
 ```
 
-#### EXT (count) BIN (len) - Bin Chain
+#### EXT BIN (len, count) - Bin Chain
 
 This is the same idea except the parts are written as strings, binary, refs, string chains, bin chains.
 
@@ -181,13 +181,13 @@ function encodeBins(vals) {
     len += encodeAny(val)
     count++
   }
-  return len + encodePairs(EXT, BIN, count, len)
+  return len + encodePairs(EXT, BIN, len, count)
 }
 ```
 
-#### EXT (count) LST (width) - Array
+#### EXT LST (count, width) - Array
 
-When `EXT` is followed by `LST`, the first signed integer is the pointer width and the second unsigned integer is the item count.
+When `EXT` is followed by `LST`, the first integer is the pointer width and the second integer is the item count.
 
 The body of this is an array of fixed-width offset pointers. (offsets recorded before writing array)
 
@@ -217,9 +217,9 @@ function encodeArray(arr) {
 }
 ```
 
-#### EXT (count) MAP (width) - Binary Tree
+#### EXT MAP (count, width) - Binary Tree
 
-When `EXT` is followed by `MAP`, the first signed integer is the pointer width and the second unsigned integer is the item count.
+When `EXT` is followed by `MAP`, the first integer is the pointer width and the second integer is the item count.
 
 The body is an array of fixed-width offset pointers to the keys (the values are always behind the keys).
 
@@ -228,15 +228,17 @@ The index entries are sorted in eytzinger layout so that a fast binary search ca
 _**TODO**: define sorting order._
 
 
-#### EXT PTR - ???
+#### EXT PTR (???, ???) - ???
 
 _Reserved for future use._
 
-#### EXT REF - ???
+#### EXT REF (???, ???)  - ???
 
 _Reserved for future use._
 
-#### EXT EXT ... - ???
+#### EXT EXT ... (???, ???, ...) - ???
+
+We can extend even more layers if needed.
 
 _Reserved for future use._
 
