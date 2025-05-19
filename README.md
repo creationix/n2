@@ -32,8 +32,8 @@ ttt 11111 ( u64 / i64 ) 16Ei or += 8Ei
 N₂ has 8 different types that encodes nicely into 3 bits of information.
 
 ```
-0 - NUM (signed value)
-1 - EXT (unsigned data)
+0 - EXT (unsigned data)
+1 - NUM (signed value)
 2 - STR (unsigned length)
 3 - BIN (unsigned length)
 4 - LST (unsigned length)
@@ -42,7 +42,7 @@ N₂ has 8 different types that encodes nicely into 3 bits of information.
 7 - REF (unsigned index)
 ```
 
-### NUM - Integer
+### NUM (signed int) - Integer
 
 Simply encode any `i64` value with type tag `NUM` and the value as.
 
@@ -52,7 +52,7 @@ function encodeInteger (num) {
 }
 ```
 
-### STR - String
+### STR (len) - String
 
 Strings are encoded by first writing the value using UTF-8 encoding.  This is followed by an unsigned tag pair with the byte length and type `STR`
 
@@ -63,7 +63,7 @@ function encodeString(str) {
 }
 ```
 
-### BIN - Binary
+### BIN (len) - Binary
 
 Binary is the same as strings except it's already serialized to bytes
 
@@ -74,7 +74,7 @@ function encodeBinary(bin) {
 }
 ```
 
-### LST - List
+### LST (len) - List
 
 Lists are encoded by first writing the items in reverse order followed by an unsigned tag pair for the total byte length of the children.
 
@@ -88,7 +88,7 @@ function encodeList(lst) {
 }
 ```
 
-### MAP - Map
+### MAP (len) - Map
 
 Maps are the same, except they key/value pairs are written (value first, then key since it's reverse)
 
@@ -103,7 +103,7 @@ function encodeMap(map) {
 }
 ```
 
-### PTR - Pointer
+### PTR (offset) - Pointer
 
 Pointers are simply byte offsets to other values, they are encoded as unsigned integer offsets (calculated before writing value)
 
@@ -114,7 +114,7 @@ function encodePointer(target) {
 }
 ```
 
-### REF - Reference
+### REF (index) - Reference
 
 The first values in the shared dictionary are `null`, `true`, and `false`.  Users of the format can extend this as long as both the encoder and decoder agree on what the other values are.
 
@@ -138,22 +138,22 @@ function encodeAny(val) {
 }
 ```
 
-### EXT - Extensions
+### EXT ... - Extensions
 
 Many of the types have advanced versions where two pairs are used for the encoding.
 
-#### EXT NUM - Decimal
+#### EXT (signed pow) NUM (base) - Decimal
 
 For decimal, split the value into an integer base and a power of 10.  Encode the base first as `NUM`, then encode the power as `EXT`
 
 ```js
 function encodeDecimal(num, pow) {
   const len = encodeSignedPair(NUM, num)
-  return len + encodePair(EXT, zigzagEncode(pow))
+  return len + encodeSignedPair(EXT, pow)
 }
 ```
 
-#### EXT STR - String Chain
+#### EXT (count) STR (len) - String Chain
 
 Advanced encoders may wish to deduplicate common substrings, the string chain allows n values to be combined into a single string.  You can mix strings and refs to string (and recursive string chains)
 
@@ -170,7 +170,7 @@ function encodeStrings(vals) {
 }
 ```
 
-#### EXT BIN - Bin Chain
+#### EXT (count) BIN (len) - Bin Chain
 
 This is the same idea except the parts are written as strings, binary, refs, string chains, bin chains.
 
@@ -187,7 +187,7 @@ function encodeBins(vals) {
 }
 ```
 
-#### EXT LST - Array
+#### EXT (count) LST (width) - Array
 
 When `EXT` is followed by `LST`, the first signed integer is the pointer width and the second unsigned integer is the item count.
 
@@ -199,7 +199,11 @@ function encodeArray(arr) {
   const start = current
   let count = 0
   for (const val of arr) {
-    offsets[count++] = encodeAny(val)
+    if (seen.has(val)) {
+      offsets[count++] = seen.get(val)
+    } else {
+      offsets[count++] = encodeAny(val)
+    }
   }
   let maxDelta = 0
   for (const offset of offsets) {
@@ -217,7 +221,7 @@ function encodeArray(arr) {
 }
 ```
 
-#### EXT MAP - Binary Tree
+#### EXT (count) MAP (width) - Binary Tree
 
 When `EXT` is followed by `MAP`, the first signed integer is the pointer width and the second unsigned integer is the item count.
 
@@ -226,6 +230,19 @@ The body is an array of fixed-width offset pointers to the keys (the values are 
 The index entries are sorted in eytzinger layout so that a fast binary search can be performed.
 
 _**TODO**: define sorting order._
+
+
+#### EXT PTR - ???
+
+_Reserved for future use._
+
+#### EXT REF - ???
+
+_Reserved for future use._
+
+#### EXT EXT ... - ???
+
+_Reserved for future use._
 
 ## Samples
 
