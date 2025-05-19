@@ -87,9 +87,17 @@ end
 
 local function test(value, expected)
   print()
+  collectgarbage 'collect'
+  collectgarbage 'collect'
   print(dump(value))
-  local data = N2.encode(value)
+  collectgarbage 'collect'
+  collectgarbage 'collect'
+  local data = N2.encode_to_string(value)
+  collectgarbage 'collect'
+  collectgarbage 'collect'
   print(to_binary(data))
+  collectgarbage 'collect'
+  collectgarbage 'collect'
   local actual = to_hex(data)
   if actual ~= expected then
     print('Expected: ' .. tostring(expected))
@@ -139,14 +147,14 @@ test(-128, '801c')
 test(128, '80001d')
 test(-129, '7fff1d')
 
-test(1e10, '0234')
-test(1e20, '14023c')
-test(1e30, '1e023c')
-test(123.456, '40e201001e25')
-test(12345.6789, '15cd5b071e27')
-test(math.pi, 'da362497921c00001f39')
-test(math.pi * 1e300, 'da362497921c00001f011f3d')
-test(math.pi * 1e-300, 'da362497921c0000c7fe1f3d')
+test(1e10, '1422')
+test(1e20, '141c22')
+test(1e30, '1e1c22')
+test(123.456, '40e20100053e')
+test(12345.6789, '15cd5b07073e')
+test(math.pi, 'da362497921c0000193f')
+test(math.pi * 1e300, '1f01da362497921c00001d3f')
+test(math.pi * 1e-300, 'c7feda362497921c00001d3f')
 
 test('', '40')
 test('Hello World', '48656c6c6f20576f726c64' .. '4b')
@@ -171,7 +179,7 @@ test(123LL, '7b1c')
 test(1234LL, 'd2041d')
 test(12345LL, '39301d')
 test(-12345LL, 'c7cf1d')
-test(0x123.456p5, '832a8e2b020000001f2b')
+test(0x123.456p5, '832a8e2b020000000b3f')
 test(0x7fffffffffffffffLL, 'ffffffffffffff7f1f') -- largest `i64` value
 test(-0x8000000000000000LL, '00000000000000801f') -- smallest `i64` value
 test(U8(200), 'c8001d')
@@ -182,10 +190,10 @@ test(U32(4000000000), '00286bee000000001f')
 test(I32(-2000000000), '006cca881e')
 test(U64(0x7fffffffffffffffLL), 'ffffffffffffff7f1f')
 test(I64(-0x8000000000000000LL), '00000000000000801f')
-test(F32(math.pi), 'ce8d3197921c00001f39')
-test(F64(math.pi), 'da362497921c00001f39')
-test(F32(1.2), 'a506c4f7e90a00001f39')
-test(F64(1.2), '1821')
+test(F32(math.pi), 'ce8d3197921c0000193f')
+test(F64(math.pi), 'da362497921c0000193f')
+test(F32(1.2), 'a506c4f7e90a0000193f')
+test(F64(1.2), '0138')
 u8Box[0] = 0xf0
 test(u8Box, 'f061')
 test(u8Box[0], 'f0001d')
@@ -238,7 +246,7 @@ test(
     .. '737472696e6746' -- "string"
     .. 'e16e6577434e32426e616d6544ad' -- { new: true, name: "N2" }
     .. '6f626a65637446' -- "object"
-    .. '40e201001e25' -- 123.456
+    .. '40e20100053e' -- 123.456
     .. '6e756d62657246' -- "number"
     .. 'e1' -- true
     .. '626f6f6c65616e47' -- "boolean"
@@ -272,3 +280,16 @@ test({
   ['Content-Type'] = 'application/json',
   ['Content-Length'] = 123,
 }, '6170706c69636174696f6e2f6a736f6e50436f6e74656e742d547970654c7b1c436f6e74656e742d4c656e6774684e2fbc')
+
+local offset = 0
+local function emit(data, len)
+  print('emit', offset, dump(data), dump(len))
+  offset = offset + len
+  return offset
+end
+
+N2.encode({
+  ['Content-Type'] = 'application/json',
+  ['Content-Length'] = 123,
+  bigpi = math.pi * 1e298,
+}, emit)
