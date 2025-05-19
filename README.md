@@ -32,14 +32,14 @@ ttt 11111 ( u64 / i64 ) 16Ei or += 8Ei
 N₂ has 8 different types that encodes nicely into 3 bits of information.
 
 ```
-0 - EXT (unsigned data)
-1 - NUM (signed value)
-2 - STR (unsigned length)
-3 - BIN (unsigned length)
-4 - LST (unsigned length)
-5 - MAP (unsigned length)
-6 - PTR (unsigned offset)
-7 - REF (unsigned index)
+0 - EXT (data)
+1 - NUM (value)
+2 - STR (length)
+3 - BIN (length)
+4 - LST (length)
+5 - MAP (length)
+6 - PTR (offset)
+7 - REF (index)
 ```
 
 ### NUM (signed int) - Integer
