@@ -2,6 +2,8 @@
 
 ![N2 Logo](www/n2logo.jpg)
 
+![Unit Tests](https://github.com/creationix/n2/actions/workflows/test.yaml/badge.svg?event=push)
+
 N₂ is short for nitrogen, a simple and essential gas.  It is also a new and exciting serialization protocol that enables random access and mutability via an append-only persistent data structure.
 
 ## Tagged Varint Encoding
