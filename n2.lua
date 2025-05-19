@@ -249,12 +249,15 @@ end
 
 ---@param root_val any
 ---@param write fun(data:ffi.cdata*|string, len:integer):integer
+---@param aggressive? boolean
 ---@return integer total_bytes_written
-local function encode(root_val, write)
+local function encode(root_val, write, aggressive)
   assert(type(write) == 'function', 'write function is required')
   local offset = 0
-  ---@type table<any,integer>
-  local seen_offsets = {}
+  ---@type table<string|number,integer>
+  local seen_primitives = {}
+  ---@type table<table,integer>
+  local seen_tables = {}
   ---@type table<any,integer>
   local seen_costs = {}
 
@@ -311,7 +314,15 @@ local function encode(root_val, write)
 
   ---@param val any
   function encode_any(val)
-    local seen_offset = seen_offsets[val]
+    local seen_offset = seen_primitives[val]
+    if aggressive and not seen_offset then
+      for k in pairs(seen_tables) do
+        if same_shape(val, k) then
+          seen_offset = seen_tables[k]
+          break
+        end
+      end
+    end
     if seen_offset then
       local delta = offset - seen_offset
       if seen_costs[val] > varint_size(delta) + 1 then
@@ -331,7 +342,7 @@ local function encode(root_val, write)
         local before = offset
         encode_string(val)
         if offset - before > 2 then
-          seen_offsets[val] = offset
+          seen_primitives[val] = offset
           seen_costs[val] = offset - before
         end
       elseif typ == 'number' then
@@ -343,14 +354,18 @@ local function encode(root_val, write)
         end
         if offset - before > 2 then
           seen_costs[val] = offset - before
-          seen_offsets[val] = offset
+          seen_primitives[val] = offset
         end
       elseif typ == 'table' then
         local is_array, iter = is_array_like(val)
+        local before = offset
         if is_array then
           encode_list(val, iter)
         else
           encode_map(val, iter)
+        end
+        if aggressive then
+          seen_tables[val] = offset - before
         end
       elseif typ == 'cdata' then
         if is_integer(val) then
@@ -403,9 +418,11 @@ local function buffered_write(data, len)
   return size
 end
 
-local function encode_to_string(root_val)
+---@param root_val any
+---@param agressive? boolean
+local function encode_to_string(root_val, agressive)
   assert(size == 0, 'encode_to_string is not reentrant')
-  local total_bytes_written = encode(root_val, buffered_write)
+  local total_bytes_written = encode(root_val, buffered_write, agressive)
   size = 0
   return ffi_string(buf, total_bytes_written)
 end

@@ -295,30 +295,55 @@ N2.encode({
 }, emit)
 
 local repeats = {}
-for i = 1, 32 do
-  repeats[i] = 'hi'
+for i = 1, 8 do
+  repeats[i] = { 'hi', 'hi', 'hi', 'hi' }
 end
 test(
   repeats,
   '686942' -- "hi"
-    .. 'c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadb'
-    -- Since "hi" only takes 3 bytes to encode, ptrs are only generated if they fit in 1 byte
-    -- So that this point, we could have 2 byte pointers, but instead repeat the value to reset
-    -- the count
-    .. '686942' -- "hi"
-    .. 'c0c1'
-    .. '249c'
+    .. 'c0c1c2'
+    .. '86' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. 'c4c5c6c7' -- 3 pointers to "hi"
+    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. 'c9cacbcc' -- 4 pointers to "hi"
+    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. 'cecfd0d1' -- 4 pointers to "hi"
+    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. 'd3d4d5d6' -- 4 pointers to "hi"
+    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. 'd8d9dadb' -- 4 pointers to "hi"
+    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. '68694' -- "hi"
+    .. '2c0c1c2' -- 3 pointers to "hi"
+    .. '86' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. 'c4c5c6c7' -- 4 pointers to "hi"
+    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
+    .. '2c9c' -- outer list header
 )
-for i = 1, 32 do
-  repeats[i] = 'h' .. tostring(i % 2)
+for i = 1, 8 do
+  repeats[i] = { 'hi', 'bye', 'hi', 'bye' }
 end
 test(
   repeats,
-  '683042' -- "h0"
-    .. '683142' -- "h1"
-    .. 'c3c1c5c3c7c5c9c7cbc9cdcbcfcdd1cfd3d1d5d3d7d5d9d7dbd9'
-    .. '683042' -- "h0"
-    .. '683142' -- "h1"
-    .. 'c3c1'
-    .. '289c'
+  '62796543' -- "bye"
+    .. '686942' -- "hi"
+    .. 'c3c1' -- pointers to "hi" and "bye"
+    .. '89' -- { "hi", "bye", "hi", "bye" }
+    .. 'c6c4c8c6' -- pointers to "hi" and "bye"
+    .. '84' -- { "hi", "bye", "hi", "bye" }
+    .. 'cbc9cdcb' -- pointers to "hi" and "bye"
+    .. '84' -- { "hi", "bye", "hi", "bye" }
+    .. 'd0ced2d0' -- pointers to "hi" and "bye"
+    .. '84' -- { "hi", "bye", "hi", "bye" }
+    .. 'd5d3d7d5' -- pointers to "hi" and "bye"
+    .. '84' -- { "hi", "bye", "hi", "bye" }
+    .. 'dad81cdcdb' -- more pointers (notice one is two bytes)
+    .. '85' -- { "hi", "bye", "hi", "bye" }
+    .. '20dc' -- pointer to "bye"
+    .. '686942' -- "hi"
+    .. '25dcc2' -- pointers to "hi" and "bye"
+    .. '88' -- { "hi", "bye", "hi", "bye" }
+    .. '29dcc62cdcc9' -- more pointers
+    .. '86' -- { "hi", "bye", "hi", "bye" }
+    .. '349c' -- outer list header
 )
