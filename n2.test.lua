@@ -1,4 +1,5 @@
 local N2 = require("n2")
+local dump = require("dump")
 
 local ffi = require("ffi")
 local bit = require("bit")
@@ -86,7 +87,7 @@ end
 
 local function test(value, expected)
 	print()
-	p(value)
+	print(dump(value))
 	local data = N2.encode(value)
 	print(to_binary(data))
 	local actual = to_hex(data)
@@ -248,52 +249,21 @@ test(
 
 test({ { { {} } } }, "80818283")
 
--- Test for custom list iterators
-test(
-	setmetatable({}, {
-		__is_array_like = true,
-		__ipairs = function()
-			local i = 0
-			return function()
-				i = i + 1
-				if i < 5 then
-					return i, i * i
-				end
-			end
-		end,
-	}),
-	"101c12080285"
-)
+-- Test for custom iterators
+local function five_squares()
+	local i = 0
+	return function()
+		i = i + 1
+		if i < 5 then
+			return i, i * i
+		end
+	end
+end
 
--- Test for custom list iterators
-test(
-	setmetatable({}, {
-		__ipairs = function()
-			local i = 0
-			return function()
-				i = i + 1
-				if i < 5 then
-					return i, i * i
-				end
-			end
-		end,
-	}),
-	"101c12080285" -- [ 1, 4, 9, 16 ]
-)
+-- [ 1, 4, 9, 16]
+test(setmetatable({}, { __ipairs = five_squares }), "101c12080285")
+-- { 1: 1, 2: 4, 3: 9, 4: 16 }
+test(setmetatable({}, { __pairs = five_squares }), "101c08120608040202a9")
 
--- Test for custom map iterators
-test(
-	setmetatable({}, {
-		__is_array_like = false,
-		__pairs = function()
-			local i = 0
-			return function()
-				i = i + 1
-				if i < 5 then
-					return i, i * i
-				end
-			end
-		end,
-	}),
-	"101c08120608040202a9" -- { [1]: 1, [2]: 4, [3]: 9, [4]: 16 }
-)
+-- test({true=true}, "e16e6577434e32426e616d6544ad")
+test({ ["true"] = true }, "e17472756544a6")

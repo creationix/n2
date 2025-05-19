@@ -88,6 +88,10 @@ local function is_array_like(val)
 	if mt then
 		if mt.__is_array_like ~= nil then
 			return mt.__is_array_like
+		elseif mt.__ipairs then
+			return true
+		elseif mt.__pairs then
+			return false
 		end
 	end
 	local i = 0
