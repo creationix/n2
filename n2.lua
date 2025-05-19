@@ -269,7 +269,9 @@ local function encode(root_val)
   local function encode_list(lst)
     local stack = {}
     local height = 0
-    for i, v in ipairs(lst) do
+    local mt = getmetatable(lst)
+    local iter = mt and mt.__ipairs or mt.__pairs or ipairs
+    for i, v in iter(lst) do
       height = i
       stack[height] = v
     end
@@ -283,7 +285,9 @@ local function encode(root_val)
   local function encode_map(map)
     local stack = {}
     local height = 0
-    for k, v in pairs(map) do
+    local mt = getmetatable(map)
+    local iter = mt and mt.__pairs or pairs
+    for k, v in iter(map) do
       height = height + 1
       stack[height] = k
       height = height + 1
