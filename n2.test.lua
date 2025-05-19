@@ -88,17 +88,9 @@ end
 
 local function test(value, expected, ...)
   print()
-  collectgarbage 'collect'
-  collectgarbage 'collect'
   print(dump(value))
-  collectgarbage 'collect'
-  collectgarbage 'collect'
   local data = N2.encode_to_string(value, ...)
-  collectgarbage 'collect'
-  collectgarbage 'collect'
   print(to_binary(data))
-  collectgarbage 'collect'
-  collectgarbage 'collect'
   local actual = to_hex(data)
   if actual ~= expected then
     print('Expected: ' .. tostring(expected))
@@ -109,6 +101,7 @@ local function test(value, expected, ...)
 end
 
 -- Overrite pairs to have sorted keys
+local original_pairs = _G.pairs
 function _G.pairs(tab)
   -- Use the custom __pairs metamethod if it exists
   local mt = getmetatable(tab)
@@ -397,13 +390,22 @@ local samples = {
   'sample9.json',
 }
 
+_G.pairs = original_pairs
+local files = {}
 for _, filename in ipairs(samples) do
-  print('Testing', filename)
+  print('Loading', filename)
   local json = readfile(filename)
   local sample = Tibs.decode(json, filename)
-  -- print(dump(sample))
   local json2 = Tibs.encode(sample)
   print('JSON', #json2)
-  local n2 = N2.encode_to_string(sample, true)
+  files[filename] = sample
+end
+
+for filename, sample in pairs(files) do
+  print('Testing', filename)
+  local n2
+  for i = 1, 1000 do
+    n2 = N2.encode_to_string(sample, i % 10 == 0)
+  end
   print('N2', #n2)
 end

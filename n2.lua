@@ -343,9 +343,8 @@ local function encode(root_val, write, aggressive)
     local stack = {}
     local height = 0
     for k, v in iter(map) do
-      height = height + 1
-      stack[height] = k
-      height = height + 1
+      height = height + 2
+      stack[height - 1] = k
       stack[height] = v
     end
     local start = offset
