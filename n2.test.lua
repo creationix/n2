@@ -293,3 +293,32 @@ N2.encode({
   ['Content-Length'] = 123,
   bigpi = math.pi * 1e298,
 }, emit)
+
+local repeats = {}
+for i = 1, 32 do
+  repeats[i] = 'hi'
+end
+test(
+  repeats,
+  '686942' -- "hi"
+    .. 'c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadb'
+    -- Since "hi" only takes 3 bytes to encode, ptrs are only generated if they fit in 1 byte
+    -- So that this point, we could have 2 byte pointers, but instead repeat the value to reset
+    -- the count
+    .. '686942' -- "hi"
+    .. 'c0c1'
+    .. '249c'
+)
+for i = 1, 32 do
+  repeats[i] = 'h' .. tostring(i % 2)
+end
+test(
+  repeats,
+  '683042' -- "h0"
+    .. '683142' -- "h1"
+    .. 'c3c1c5c3c7c5c9c7cbc9cdcbcfcdd1cfd3d1d5d3d7d5d9d7dbd9'
+    .. '683042' -- "h0"
+    .. '683142' -- "h1"
+    .. 'c3c1'
+    .. '289c'
+)

@@ -155,6 +155,22 @@ end
 -- At most we will need 18 bytes for an ext pair
 local varintBuffer = ffi.new 'uint8_t[18]'
 
+---@param num integer
+---@return integer
+local function varint_size(num)
+  if num < 28 then
+    return 1
+  elseif num < 0x100 then
+    return 2
+  elseif num < 0x10000 then
+    return 3
+  elseif num < 0x100000000 then
+    return 5
+  else
+    return 9
+  end
+end
+
 --- @param val integer number to write
 --- @param offset integer
 --- @return integer new_offset
@@ -237,6 +253,10 @@ end
 local function encode(root_val, write)
   assert(type(write) == 'function', 'write function is required')
   local offset = 0
+  ---@type table<any,integer>
+  local seen_offsets = {}
+  ---@type table<any,integer>
+  local seen_costs = {}
 
   local function encode_integer(val)
     offset = write(encode_signed_pair(NUM, val))
@@ -250,28 +270,11 @@ local function encode(root_val, write)
     offset = write(encode_signed_pair_ext(NUM, base, power))
   end
 
-  local function encode_number(val)
-    if val == math.floor(val) and val >= -0x8000 and val < 0x8000 then
-      -- Fast path for small integers that are always better as non-extended
-      encode_integer(val)
-    else
-      -- Use extended encoding for all other numbers
-      encode_float(val)
-    end
-  end
-
   ---@param str string
   local function encode_string(str)
     local len = #str
     write(str, len)
     offset = write(encode_pair(STR, len))
-  end
-
-  ---@param val ffi.cdata*
-  local function encode_binary(val)
-    local len = assert(sizeof(val))
-    write(val, len)
-    offset = write(encode_pair(BIN, len))
   end
 
   local encode_any
@@ -306,17 +309,16 @@ local function encode(root_val, write)
     offset = write(encode_pair(MAP, offset - start))
   end
 
-  local function encode_table(val)
-    local is_array, iter = is_array_like(val)
-    if is_array then
-      encode_list(val, iter)
-    else
-      encode_map(val, iter)
-    end
-  end
-
   ---@param val any
   function encode_any(val)
+    local seen_offset = seen_offsets[val]
+    if seen_offset then
+      local delta = offset - seen_offset
+      if seen_costs[val] > varint_size(delta) + 1 then
+        offset = write(encode_pair(PTR, delta))
+        return
+      end
+    end
     if val == nil then
       offset = write(encode_pair(REF, NULL))
     elseif val == true then
@@ -326,11 +328,30 @@ local function encode(root_val, write)
     else
       local typ = type(val)
       if typ == 'string' then
+        local before = offset
         encode_string(val)
+        if offset - before > 2 then
+          seen_offsets[val] = offset
+          seen_costs[val] = offset - before
+        end
       elseif typ == 'number' then
-        encode_number(val)
+        local before = offset
+        if val == math.floor(val) and val >= -0x8000 and val < 0x8000 then
+          encode_integer(val)
+        else
+          encode_float(val)
+        end
+        if offset - before > 2 then
+          seen_costs[val] = offset - before
+          seen_offsets[val] = offset
+        end
       elseif typ == 'table' then
-        encode_table(val)
+        local is_array, iter = is_array_like(val)
+        if is_array then
+          encode_list(val, iter)
+        else
+          encode_map(val, iter)
+        end
       elseif typ == 'cdata' then
         if is_integer(val) then
           encode_integer(val)
@@ -340,7 +361,9 @@ local function encode(root_val, write)
           local info = ffi.typeinfo(ffi.typeof(val)).info
           local ct = arshift(info, 28)
           if ct == ffi.C.CT_ARRAY or ct == ffi.C.CT_STRUCT then
-            encode_binary(val)
+            local len = assert(sizeof(val))
+            write(val, len)
+            offset = write(encode_pair(BIN, len))
           else
             error('Unsupported ctype: ' .. ct)
           end
