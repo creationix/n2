@@ -1,5 +1,9 @@
 # N₂: Data, Distilled
 
+![N2 Logo](www/n2logo.jpg)
+
+N₂ is short for nitrogen, a simple and essential gas.  It is also a new and exciting serialization protocol that enables random access and mutability via an append-only persistent data structure.
+
 ## Tagged Varint Encoding
 
 The core encoding is the tagged varint that encodes a 3 bit type and up to 64 bit associated integer.

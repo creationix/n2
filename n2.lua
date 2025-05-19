@@ -5,9 +5,19 @@ local band = bit.band
 local lshift = bit.lshift
 local rshift = bit.rshift
 
+local U8 = ffi.typeof("uint8_t[?]")
+local u64Box = ffi.new("uint64_t[1]")
+local u32Box = ffi.new("uint32_t[1]")
+local u16Box = ffi.new("uint16_t[1]")
+local u8Box = ffi.new("uint8_t[1]")
+local i64Box = ffi.new("int64_t[1]")
+local i32Box = ffi.new("int32_t[1]")
+local i16Box = ffi.new("int16_t[1]")
+local i8Box = ffi.new("int8_t[1]")
+
 -- Major Types
-local INT = 0 -- (zigzag val)
-local DEC = 1 -- (zigzag power, zigzag base)
+local NUM = 0 -- (zigzag val)
+local EXT = 1 -- (zigzag power, zigzag base)
 local STR = 2 -- (length)
 local BIN = 3 -- (length)
 local LST = 4 -- (length)
@@ -20,61 +30,74 @@ local TRUE = 1
 local FALSE = 2
 
 local capacity = 1024
-local buf = ffi.new("uint8_t[?]", capacity)
+local buf = U8(capacity)
 
----@param val any
+---@param root_val any
 ---@return string
 local function encode(root_val)
 	local size = 0
 
-	---@param ... string|integer
-	---@return integer
-	local function write(...)
-		local count = select("#", ...)
-		local needed = size
-		for i = count, 1, -1 do
-			local item = select(i, ...)
-			if type(item) == "string" then
-				needed = needed + #item
-			elseif type(item) == "number" then
-				needed = needed + 1
-			end
+	local function ensure_capacity(needed)
+		if needed <= capacity then
+			return
 		end
-		if needed > capacity then
-			repeat
-				capacity = capacity * 2
-			until capacity >= needed
-			local new_buf = ffi.new("uint8_t[?]", capacity)
-			ffi.copy(new_buf, buf, size)
-			buf = new_buf
-		end
-		for i = count, 1, -1 do
-			local item = select(i, ...)
-			if type(item) == "string" then
-				local len = #item
-				ffi.copy(buf + size, item, len)
-				size = size + len
-			elseif type(item) == "number" then
-				buf[size] = item
-				size = size + 1
-			end
-		end
-		return size
+		repeat
+			capacity = capacity * 2
+		until capacity >= needed
+		local new_buf = U8(capacity)
+		ffi.copy(new_buf, buf, size)
+		buf = new_buf
+	end
+
+	---@param str integer
+	local function write_string(str)
+		local len = #str
+		ensure_capacity(size + len)
+		ffi.copy(buf + size, str, len)
+		size = size + len
+	end
+
+	---@param byte integer
+	local function write_byte(byte)
+		ensure_capacity(size + 1)
+		buf[size] = byte
+		size = size + 1
+	end
+
+	---@param data ffi.cdata*
+	---@param len integer
+	local function write_binary(data, len)
+		ensure_capacity(size + len)
+		ffi.copy(buf + size, data, len)
+		size = size + len
 	end
 
 	---@param typ integer
 	---@param val integer
-	---@return integer
-	local function encode_pair(typ, val, ...)
-		-- If val fits in 4 bits, write it directly
-		if val < 16 then
-			return write(bor(lshift(val, 4), typ), ...)
+	local function encode_pair(typ, val)
+		typ = lshift(typ, 5)
+		if val < 28 then
+			write_byte(bor(typ, val))
+		elseif val < 0x100 then
+			write_byte(val)
+			write_byte(bor(typ, 12))
+		elseif val < 0x10000 then
+			u16Box[0] = val
+			write_binary(u16Box, 2)
+			write_byte(bor(typ))
+		elseif val < 0x100000000 then
+			u32Box[0] = val
+			write_binary(u32Box, 4)
+			write_byte(bor(typ))
+		else
+			u64Box[0] = val
+			write_binary(u64Box, 8)
+			write_byte(bor(typ))
 		end
-		-- If val fits in 4 bits + 7 bits, write it directly
-		if val < 2048 then
-			return write(bor(lshift(band(val, 0xf), 4), 0x80, typ), rshift(val, 4), ...)
-		end
-		error("TODO: encode larger numbers")
+	end
+
+	local function encode_pairs(typ, val1, val2, ...)
+		-- First write val2 using
 	end
 
 	---@param str string
