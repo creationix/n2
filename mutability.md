@@ -67,3 +67,8 @@ Each revision has commit-like metadata:
   - a list of ref pairs (parent index + byte offset into that parent)
 - content
   - the N2 body of this revision and it's new changes
+
+
+It sounds like there is no benefit to appending to existing revisions if I'm going to align on block boundaries anyway.  A caify document is actually lots of smaller documents linked by content hash.  Why does it matter if all the blocks can be reached only via caify links?  If I have a seperate caify root hash for each revision, then there is less overhead per revision and the linkage is more flexible to enable fork/merge workflows.
+
+If the N2 documents are never appended to, we don't need the reverse format.  We can use whichever format is easier to encode/decode and sync across devices using caify.

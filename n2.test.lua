@@ -149,14 +149,14 @@ test(0x80000000, '00000080000000001f')
 test(0x7fffffffffffffffLL, 'ffffffffffffff7f1f')
 test(-0x8000000000000000LL, '00000000000000801f')
 
-test(1e10, '1422')
-test(1e20, '141c22')
-test(1e30, '1e1c22')
-test(123.456, '40e20100053e')
-test(12345.6789, '15cd5b07073e')
-test(math.pi, 'da362497921c0000193f')
-test(math.pi * 1e300, '1f01da362497921c00001d3f')
-test(math.pi * 1e-300, 'c7feda362497921c00001d3f')
+test(1e10, '0234')
+test(1e20, '02143c')
+test(1e30, '021e3c')
+test(123.456, '40e201001e25')
+test(12345.6789, '15cd5b071e27')
+test(math.pi, 'da362497921c00001f39')
+test(math.pi * 1e300, 'da362497921c00001f1f013d')
+test(math.pi * 1e-300, 'da362497921c00001fc7fe3d')
 
 test('', '40')
 test('Hello World', '48656c6c6f20576f726c64' .. '4b')
@@ -181,7 +181,7 @@ test(123LL, '7b1c')
 test(1234LL, 'd2041d')
 test(12345LL, '39301d')
 test(-12345LL, 'c7cf1d')
-test(0x123.456p5, '832a8e2b020000000b3f')
+test(0x123.456p5, '832a8e2b020000001f2b')
 test(0x7fffffffffffffffLL, 'ffffffffffffff7f1f') -- largest `i64` value
 test(-0x8000000000000000LL, '00000000000000801f') -- smallest `i64` value
 test(U8(200), 'c8001d')
@@ -192,10 +192,10 @@ test(U32(4000000000), '00286bee000000001f')
 test(I32(-2000000000), '006cca881e')
 test(U64(0x7fffffffffffffffLL), 'ffffffffffffff7f1f')
 test(I64(-0x8000000000000000LL), '00000000000000801f')
-test(F32(math.pi), 'ce8d3197921c0000193f')
-test(F64(math.pi), 'da362497921c0000193f')
-test(F32(1.2), 'a506c4f7e90a0000193f')
-test(F64(1.2), '0138')
+test(F32(math.pi), 'ce8d3197921c00001f39')
+test(F64(math.pi), 'da362497921c00001f39')
+test(F32(1.2), 'a506c4f7e90a00001f39')
+test(F64(1.2), '1821')
 u8Box[0] = 0xf0
 test(u8Box, 'f061')
 test(u8Box[0], 'f0001d')
@@ -248,7 +248,7 @@ test(
     .. '737472696e6746' -- "string"
     .. 'e16e6577434e32426e616d6544ad' -- { new: true, name: "N2" }
     .. '6f626a65637446' -- "object"
-    .. '40e20100053e' -- 123.456
+    .. '40e201001e25' -- 123.456
     .. '6e756d62657246' -- "number"
     .. 'e1' -- true
     .. '626f6f6c65616e47' -- "boolean"
@@ -390,7 +390,7 @@ local samples = {
   'sample9.json',
 }
 
-_G.pairs = original_pairs
+-- _G.pairs = original_pairs
 local files = {}
 for _, filename in ipairs(samples) do
   print('Loading', filename)
@@ -401,11 +401,18 @@ for _, filename in ipairs(samples) do
   files[filename] = sample
 end
 
-for filename, sample in pairs(files) do
-  print('Testing', filename)
-  local n2
-  for i = 1, 1000 do
-    n2 = N2.encode_to_string(sample, i % 10 == 0)
-  end
-  print('N2', #n2)
-end
+-- for i = 1, 1000 do
+--   for filename, sample in pairs(files) do
+--     -- print('Testing', filename)
+--     local n2
+--     n2 = N2.encode_to_string(sample, i % 10 == 0)
+--     -- print('N2', #n2)
+--   end
+-- end
+
+local size = 0
+N2.encode(files['sample1.json'], function(ptr, len)
+  print('WRITE', dump(ptr), dump(len))
+  size = size + len
+  return size
+end, true)

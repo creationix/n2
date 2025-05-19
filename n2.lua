@@ -12,6 +12,65 @@ local copy = ffi.copy
 local istype = ffi.istype
 local ffi_string = ffi.string
 
+ffi.cdef [[
+  #pragma packed
+  struct n2_5 {
+    uint8_t u5:5;
+    uint8_t type:3;
+  };
+  #pragma packed
+  struct n2_8 {
+    union {
+      uint8_t u8;
+      int8_t i8;
+    };
+    uint8_t tag:5;
+    uint8_t type:3;
+  };
+  #pragma packed
+  struct n2_16 {
+    union {
+      uint16_t u16;
+      int16_t i16;
+    };
+    uint8_t tag:5;
+    uint8_t type:3;
+  };
+    #pragma packed
+  struct n2_32 {
+    union {
+      uint32_t u32;
+      int32_t i32;
+    };
+    uint8_t tag:5;
+    uint8_t type:3;
+  };
+  #pragma packed
+  struct n2_64 {
+    union {
+      uint64_t u64;
+      int64_t i64;
+    };
+    uint8_t tag:5;
+    uint8_t type:3;
+  };
+]]
+
+---@class N2_5:ffi.cdata*
+local n2_5 = ffi.new 'struct n2_5'
+---@class N2_8:ffi.cdata*
+local n2_8 = ffi.new 'struct n2_8'
+n2_8.tag = 28
+---@class N2_16:ffi.cdata*
+local n2_16 = ffi.new 'struct n2_16'
+n2_16.tag = 29
+---@class N2_32:ffi.cdata*
+local n2_32 = ffi.new 'struct n2_32'
+n2_32.tag = 30
+---@class N2_64:ffi.cdata*
+local n2_64 = ffi.new 'struct n2_64'
+n2_64.tag = 31
+
 local U8Arr = ffi.typeof 'uint8_t[?]'
 local U8 = ffi.typeof 'uint8_t'
 local U16 = ffi.typeof 'uint16_t'
@@ -214,80 +273,63 @@ local function varint_size(num)
   end
 end
 
---- @param val integer number to write
---- @param offset integer
---- @return integer new_offset
---- @return integer lower 5 bits for pair
-local function encode_varint(offset, val)
-  local num = tonumber(val)
-  if num < 28 then
-    return offset, val
-  elseif num < 0x100 then
-    varintBuffer[offset] = val
-    return offset + 1, 28
-  elseif num < 0x10000 then
-    cast(u16Ptr, varintBuffer + offset)[0] = val
-    return offset + 2, 29
-  elseif num < 0x100000000 then
-    cast(u32Ptr, varintBuffer + offset)[0] = val
-    return offset + 4, 30
-  else
-    cast(u64Ptr, varintBuffer + offset)[0] = val
-    return offset + 8, 31
-  end
-end
-
---- @param val integer number to write
---- @param offset integer
---- @return integer new_offset
---- @return integer lower 5 bits for pair
-local function encode_signed_varint(offset, val)
-  local num = tonumber(val)
-  if num >= -14 and num < 14 then
-    -- Small signed numbers use zigzag encoding
-    return offset, bxor(lshift(val, 1), arshift(val, 31))
-  elseif num >= -0x80 and num < 0x80 then
-    cast(i8Ptr, varintBuffer + offset)[0] = val
-    return offset + 1, 28
-  elseif num >= -0x8000 and num < 0x8000 then
-    cast(i16Ptr, varintBuffer + offset)[0] = val
-    return offset + 2, 29
-  elseif num >= -0x80000000 and num < 0x80000000 then
-    cast(i32Ptr, varintBuffer + offset)[0] = val
-    return offset + 4, 30
-  else
-    cast(i64Ptr, varintBuffer + offset)[0] = val
-    return offset + 8, 31
-  end
-end
-
 ---@param typ integer
 ---@param val integer
----@return ffi.cdata* ptr
+---@return N2_5|N2_8|N2_16|N2_32|N2_64 ptr
 ---@return integer len
 local function encode_pair(typ, val)
-  local offset, lower = encode_varint(0, val)
-  varintBuffer[offset] = bor(lshift(typ, 5), lower)
-  return varintBuffer, offset + 1
+  local num = tonumber(val)
+  if num < 28 then
+    n2_5.type = typ
+    n2_5.u5 = val
+    return n2_5, 1
+  elseif num < 0x100 then
+    n2_8.type = typ
+    n2_8.u8 = val
+    return n2_8, 2
+  elseif num < 0x10000 then
+    n2_16.type = typ
+    n2_16.u16 = val
+    return n2_16, 3
+  elseif num < 0x100000000 then
+    n2_32.type = typ
+    n2_32.u32 = val
+    return n2_32, 5
+  else
+    n2_64.type = typ
+    n2_64.u64 = val
+    return n2_64, 9
+  end
 end
 
 ---@param typ integer
 ---@param val integer
----@return ffi.cdata* ptr
+---@return N2_5|N2_8|N2_16|N2_32|N2_64 ptr
 ---@return integer len
 local function encode_signed_pair(typ, val)
-  local offset, lower = encode_signed_varint(0, val)
-  varintBuffer[offset] = bor(lshift(typ, 5), lower)
-  return varintBuffer, offset + 1
-end
-
-local function encode_signed_pair_ext(typ, val1, val2)
-  local offset, lower1, lower2
-  offset, lower2 = encode_signed_varint(0, val2)
-  offset, lower1 = encode_signed_varint(offset, val1)
-  varintBuffer[offset] = bor(lshift(typ, 5), lower2)
-  varintBuffer[offset + 1] = bor(lshift(EXT, 5), lower1)
-  return varintBuffer, offset + 2
+  local num = tonumber(val)
+  if num >= -14 and num < 14 then
+    n2_5.type = typ
+    -- Small signed numbers use zigzag encoding
+    n2_5.u5 = bxor(lshift(val, 1), arshift(val, 31))
+    return n2_5, 1
+  elseif num >= -0x80 and num < 0x80 then
+    n2_8.type = typ
+    n2_8.i8 = val
+    return n2_8, 2
+  elseif num >= -0x8000 and num < 0x8000 then
+    n2_16.type = typ
+    n2_16.i16 = val
+    return n2_16, 3
+  elseif num >= -0x80000000 and num < 0x80000000 then
+    n2_32.type = typ
+    n2_32.i32 = val
+    return n2_32, 5
+  else
+    n2_64.type = typ
+    n2_64.i64 = val
+    return n2_64, 9
+  end
 end
 
 ---@param root_val any
@@ -313,13 +355,16 @@ local function encode(root_val, write, aggressive)
     if power >= 0 and power < 10 then
       return encode_integer(val)
     end
-    offset = write(encode_signed_pair_ext(NUM, base, power))
+    write(encode_signed_pair(NUM, base))
+    offset = write(encode_signed_pair(EXT, power))
   end
 
   ---@param str string
   local function encode_string(str)
     local len = #str
-    write(str, len)
+    if len > 0 then
+      write(str, len)
+    end
     offset = write(encode_pair(STR, len))
   end
 
@@ -424,7 +469,9 @@ local function encode(root_val, write, aggressive)
           local ct = arshift(info, 28)
           if ct == ffi.C.CT_ARRAY or ct == ffi.C.CT_STRUCT then
             local len = assert(sizeof(val))
-            write(val, len)
+            if len > 0 then
+              write(val, len)
+            end
             offset = write(encode_pair(BIN, len))
           else
             error('Unsupported ctype: ' .. ct)
