@@ -4,13 +4,10 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     container:
-      image: creationix/luvit:latest
+      image: creationix/luajit:openresty-2.1-20250117
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
-      - name: Run Tests in Luvit
-        run: |
-          luvit n2.test.lua
       - name: Run Tests in LuaJIT
         run: |
           luajit n2.test.lua
