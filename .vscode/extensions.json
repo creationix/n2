@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "johnnymorganz.stylua",
+        "sumneko.lua",
+        "dwenegar.vscode-luacheck"
+    ]
+}

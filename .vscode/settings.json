@@ -1,0 +1,7 @@
+{
+    "Lua.runtime.version": "LuaJIT",
+    "editor.semanticHighlighting.enabled": true,
+    "Lua.hint.enable": false,
+    "Lua.hint.setType": true,
+    "Lua.workspace.library": []
+}
