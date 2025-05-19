@@ -1,13 +1,24 @@
 local ffi = require("ffi")
+local istype = ffi.istype
 local bit = require("bit")
 local bor = bit.bor
 local band = bit.band
 local lshift = bit.lshift
-local rshift = bit.rshift
 local arshift = bit.arshift
 local bxor = bit.bxor
 
 local U8 = ffi.typeof("uint8_t[?]")
+local U8 = ffi.typeof("uint8_t")
+local U16 = ffi.typeof("uint16_t")
+local U32 = ffi.typeof("uint32_t")
+local U64 = ffi.typeof("uint64_t")
+local I8 = ffi.typeof("int8_t")
+local I16 = ffi.typeof("int16_t")
+local I32 = ffi.typeof("int32_t")
+local I64 = ffi.typeof("int64_t")
+local F32 = ffi.typeof("float")
+local F64 = ffi.typeof("double")
+
 local u64Box = ffi.new("uint64_t[1]")
 local u32Box = ffi.new("uint32_t[1]")
 local u16Box = ffi.new("uint16_t[1]")
@@ -103,6 +114,20 @@ local function is_array_like(val)
 	return true
 end
 
+--- Detect if a cdata is an integer
+---@param val ffi.cdata*
+---@return boolean
+local function is_integer(val)
+	return istype(I64, val)
+		or istype(I32, val)
+		or istype(I16, val)
+		or istype(I8, val)
+		or istype(U64, val)
+		or istype(U32, val)
+		or istype(U16, val)
+		or istype(U8, val)
+end
+
 local capacity = 1024
 local buf = U8(capacity)
 
@@ -134,6 +159,7 @@ local function encode(root_val)
 	---@param byte integer
 	local function write_byte(byte)
 		ensure_capacity(size + 1)
+		p({ size = size, buf = buf, byte = byte })
 		buf[size] = byte
 		size = size + 1
 	end
@@ -215,10 +241,15 @@ local function encode(root_val)
 		write_byte(bor(lshift(ext, 5), lower1))
 	end
 
+	local function encode_integer(val)
+		p("encode_integer", val)
+		write_signed_pair(NUM, val)
+	end
+
 	local function encode_number(val)
 		if val == math.floor(val) and val >= -0x8000 and val < 0x8000 then
 			-- Fast path for small integers that are always better as non-extended
-			write_signed_pair(NUM, val)
+			encode_integer(val)
 		else
 			-- Use extended encoding for all other numbers
 			write_signed_pair_ext(EXT, NUM, split_number(val))
@@ -229,6 +260,13 @@ local function encode(root_val)
 	local function encode_string(str)
 		write_string(str)
 		write_pair(STR, #str)
+	end
+
+	---@param val ffi.cdata*
+	local function encode_binary(val)
+		local len = assert(ffi.sizeof(val))
+		write_binary(val, len)
+		write_pair(BIN, len)
 	end
 
 	local encode_any
@@ -287,6 +325,12 @@ local function encode(root_val)
 				encode_number(val)
 			elseif typ == "table" then
 				encode_table(val)
+			elseif typ == "cdata" then
+				if is_integer(val) then
+					encode_integer(val)
+				else
+					encode_binary(val)
+				end
 			else
 				error("Unsupported type: " .. typ)
 			end
@@ -363,6 +407,19 @@ test("Hello World" .. string.rep("!", 100))
 
 test({ 1, 2, 3 })
 test({ name = "N2", new = true })
+
+local bin = U8(8)
+bin[0] = 1
+bin[1] = 3
+bin[2] = 7
+bin[3] = 15
+bin[4] = 31
+bin[5] = 63
+bin[6] = 127
+bin[7] = 255
+test(bin)
+
+test(123ULL)
 -- print(encode(""))
 -- print(encode("Hello World"))
 -- print(encode(("Hello World"):rep(10)))
