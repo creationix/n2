@@ -66,6 +66,7 @@ local oct_lookup = {
   [0xF] = '1111',
 }
 
+
 local hex_lookup = {}
 for i = 0, 255 do
   hex_lookup[i] = oct_lookup[arshift(i, 4)] .. oct_lookup[band(i, 0x0f)]

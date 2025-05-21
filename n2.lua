@@ -1,3 +1,17 @@
+-- Major Types
+local NUM = 0 -- (val)
+local EXT = 1 -- (data)
+local STR = 2 -- (length)
+local BIN = 3 -- (length)
+local LST = 4 -- (length)
+local MAP = 5 -- (length)
+local PTR = 6 -- (offset)
+local REF = 7 -- (index)
+-- Built-in Refs
+local NULL = 0
+local TRUE = 1
+local FALSE = 2
+
 local bit = require 'bit'
 local dump = require 'dump'
 local ffi = require 'ffi'
@@ -91,19 +105,6 @@ local u16Ptr = ffi.typeof 'uint16_t*'
 local u32Ptr = ffi.typeof 'uint32_t*'
 local u64Ptr = ffi.typeof 'uint64_t*'
 
--- Major Types
-local NUM = 0 -- (val)
-local EXT = 1 -- (data)
-local STR = 2 -- (length)
-local BIN = 3 -- (length)
-local LST = 4 -- (length)
-local MAP = 5 -- (length)
-local PTR = 6 -- (offset)
-local REF = 7 -- (index)
--- Built-in Refs
-local NULL = 0
-local TRUE = 1
-local FALSE = 2
 
 -- Given a double value, split it into a base and power of 10.
 -- For example, 1234.5678 would be split into 12345678 and -4.
