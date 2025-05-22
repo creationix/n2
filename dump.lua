@@ -1,3 +1,6 @@
+local ffi = require 'ffi'
+local U8Arr = ffi.typeof 'uint8_t[?]'
+
 local function color(val, str)
   local typ = type(val)
   local c
@@ -86,10 +89,20 @@ local function dump_string(str)
   return "'" .. string.gsub(str, "['\r\n\t]", escape_char) .. "'"
 end
 
+local function dump_bytes(bin)
+  local str = ffi.string(bin, ffi.sizeof(bin))
+  return string.format("<%s>", string.gsub(str, '.', function(c)
+    return string.format('%02x', c:byte(1))
+  end))
+end
+
 -- A really simple dump that prints normal lua with lots of whitespace.
 local function dump(val, indent)
   if type(val) == 'string' then
     return color(val, dump_string(val))
+  end
+  if type(val) == 'cdata' and ffi.istype(U8Arr, val) then
+    return color(val, dump_bytes(val))
   end
   if type(val) ~= 'table' then
     return color(val, tostring(val))

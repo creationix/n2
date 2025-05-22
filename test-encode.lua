@@ -1,6 +1,15 @@
 local N2 = require 'n2'
 local Tibs = require 'tibs'
 local dump = require 'dump'
+local ffi = require 'ffi'
+
+function _G.pairs(self)
+  local mt = getmetatable(self)
+  if mt.__pairs then
+    return mt.__pairs(self)
+  end
+  return next, self
+end
 
 local function readfile(path)
   local f = assert(io.open(path, 'r'))
@@ -9,30 +18,19 @@ local function readfile(path)
   return Tibs.decode(data, path)
 end
 
-local function to_hex(data)
-  local bytes = {}
-  for i = 1, #data do
-    local b = data:byte(i)
-    bytes[i] = string.format('%02x', b)
-  end
-  return string.format('%s', table.concat(bytes, ''))
-end
-
 local fixtures = readfile 'fixtures/encode.tibs'
 
+-- print(dump(fixtures))
 for section, tests in pairs(fixtures) do
-  print("Section", section)
+  print('section: ' .. dump(section))
   for i = 1, #tests, 2 do
     local input = tests[i]
-    local expected_raw = tests[i+1]
-    print(dump(input))
-    local expected = to_hex(expected_raw)
-    print(expected)
-    local actual_raw = N2.encode_to_string(input)
-    local actual = to_hex(actual_raw)
-    if actual ~= expected then
-      print('Expected: ' .. tostring(expected))
-      print('  Actual: ' .. tostring(actual))
+    local expected = tests[i + 1]
+    print('input:    ' .. dump(input))
+    print('expected: ' .. dump(expected))
+    local actual = N2.encode_to_bytes(input)
+    print('actual:   ' .. dump(actual))
+    if dump(actual) ~= dump(expected) then
       error(string.format('Encoding Mismatch in %s', section))
     end
   end

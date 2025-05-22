@@ -353,7 +353,7 @@ local function encode(root_val, write, aggressive)
 
   local function encode_float(val)
     local base, power = split_number(val)
-    if power >= 0 and power < 10 then
+    if power >= 0 and power < 3 then
       return encode_integer(val)
     end
     write(encode_signed_pair(NUM, base))
@@ -439,7 +439,7 @@ local function encode(root_val, write, aggressive)
         end
       elseif typ == 'number' then
         local before = offset
-        if val == math.floor(val) and val >= -0x8000 and val < 0x8000 then
+        if val == math.floor(val) and val >= -128 and val < 128 then
           encode_integer(val)
         else
           encode_float(val)
@@ -522,8 +522,21 @@ local function encode_to_string(root_val, agressive)
   return ffi_string(buf, total_bytes_written)
 end
 
+---@param root_val any
+---@param agressive? boolean
+local function encode_to_bytes(root_val, agressive)
+  assert(size == 0)
+  local total_bytes_written = encode(root_val, buffered_write, agressive)
+  size = 0
+  local new_buf = U8Arr(total_bytes_written)
+  ffi.copy(new_buf, buf, total_bytes_written)
+  return new_buf
+end
+
+
 return {
   split_number = split_number,
   encode = encode,
   encode_to_string = encode_to_string,
+  encode_to_bytes = encode_to_bytes,
 }
