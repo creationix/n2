@@ -922,6 +922,17 @@ local function to_number_maybe(n)
   return (n <= 0x1fffffffffffff and n >= -0x1fffffffffffff) and tonumber(n) or n
 end
 
+ffi.cdef [[
+  union i64_converter {
+    uint64_t u;
+    int64_t i;
+    double d;
+  };
+]]
+
+---@class I64Converter
+local i64_converter = ffi.new 'union i64_converter'
+
 -- Parse a JSON number Literal
 --- @param data integer[]
 --- @param first integer
@@ -929,21 +940,28 @@ end
 --- @return number num
 local function tibs_parse_number(data, first, last)
   if is_integer(data, first, last) then
-    -- sign is reversed since we need to use the negative range of I64 for full precision
-    -- notice that the big value accumulated is always negative.
-    local sign = -1LL
-    local big = 0LL
+    local neg = false
+    local big = 0ULL
     while first < last do
       local c = data[first]
       if c == 0x2d then -- "-"
-        sign = 1LL
+        neg = true
       else
-        big = big * 10LL - I64(data[first] - 0x30)
+        big = big * 10ULL + U64(data[first] - 0x30)
       end
       first = first + 1
     end
 
-    return to_number_maybe(big * sign)
+    print(require 'dump' { big = big, neg = neg })
+    if big == 0ULL then
+      return 0
+    end
+    if neg then
+      i64_converter.u = 0xffffffffffffffffULL - (big - 1ULL)
+      return to_number_maybe(i64_converter.i)
+    else
+      return to_number_maybe(big)
+    end
   else
     return tonumber(ffi_string(data + first, last - first), 10)
   end

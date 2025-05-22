@@ -105,7 +105,6 @@ local u16Ptr = ffi.typeof 'uint16_t*'
 local u32Ptr = ffi.typeof 'uint32_t*'
 local u64Ptr = ffi.typeof 'uint64_t*'
 
-
 -- Given a double value, split it into a base and power of 10.
 -- For example, 1234.5678 would be split into 12345678 and -4.
 local function split_number(val)
@@ -353,11 +352,30 @@ local function encode(root_val, write, aggressive)
 
   local function encode_float(val)
     local base, power = split_number(val)
-    if power >= 0 and power < 3 then
+    print(dump { val = val, base = base, power = power })
+    if power == 0 then
       return encode_integer(val)
     end
     write(encode_signed_pair(NUM, base))
     offset = write(encode_signed_pair(EXT, power))
+  end
+
+  local function encode_number(val)
+    print('encode number: ' .. dump(val))
+    if val == math.floor(val) and val >= -128 and val < 128 then
+      encode_integer(val)
+    else
+      encode_float(val)
+    end
+  end
+
+  local function encode_bigint(val)
+    local num = tonumber(val)
+    print(dump { num, val })
+    if num == val then
+      return encode_number(val)
+    end
+    return encode_integer(val)
   end
 
   ---@param str string
@@ -439,11 +457,7 @@ local function encode(root_val, write, aggressive)
         end
       elseif typ == 'number' then
         local before = offset
-        if val == math.floor(val) and val >= -128 and val < 128 then
-          encode_integer(val)
-        else
-          encode_float(val)
-        end
+        encode_number(val)
         if offset - before > 2 then
           seen_costs[val] = offset - before
           seen_primitives[val] = offset
@@ -462,7 +476,7 @@ local function encode(root_val, write, aggressive)
         end
       elseif typ == 'cdata' then
         if is_integer(val) then
-          encode_integer(val)
+          encode_bigint(val)
         elseif is_float(val) then
           encode_float(tonumber(val))
         else
@@ -532,7 +546,6 @@ local function encode_to_bytes(root_val, agressive)
   ffi.copy(new_buf, buf, total_bytes_written)
   return new_buf
 end
-
 
 return {
   split_number = split_number,

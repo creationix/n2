@@ -5,7 +5,7 @@ local ffi = require 'ffi'
 
 function _G.pairs(self)
   local mt = getmetatable(self)
-  if mt.__pairs then
+  if mt and mt.__pairs then
     return mt.__pairs(self)
   end
   return next, self

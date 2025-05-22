@@ -45,6 +45,10 @@ for i = -200, 200 do
   assert(base == 12345678912345)
   assert(i == exponent, i)
 end
+local base, exponent = N2.split_number(-10000000000000000)
+print(dump{base, exponent})
+assert(base == -1)
+assert(exponent == 16)
 zone()
 
 local oct_lookup = {
