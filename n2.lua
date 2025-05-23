@@ -137,10 +137,11 @@ local function split_number(val)
     return tonumber(base), decimal_pos - #str
   end
   -- Count trailing zeroes
-  local zeroes_pos = str:find '0+$'
+  local zeroes_pos, _, zeroes = str:find '(0+)U?L?L?$'
+  print(dump{start=zeroes_pos,pos2=pos2})
   if zeroes_pos then
     local base = str:sub(1, zeroes_pos - 1)
-    local exponent = #str - zeroes_pos + 1
+    local exponent = #zeroes
     return tonumber(base), exponent
   end
   return val, 0
@@ -362,7 +363,7 @@ local function encode(root_val, write, aggressive)
 
   local function encode_number(val)
     print('encode number: ' .. dump(val))
-    if val == math.floor(val) and val >= -128 and val < 128 then
+    if val == math.floor(tonumber(val)) and val >= -128 and val < 128 then
       encode_integer(val)
     else
       encode_float(val)
@@ -370,12 +371,7 @@ local function encode(root_val, write, aggressive)
   end
 
   local function encode_bigint(val)
-    local num = tonumber(val)
-    print(dump { num, val })
-    if num == val then
       return encode_number(val)
-    end
-    return encode_integer(val)
   end
 
   ---@param str string

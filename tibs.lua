@@ -915,13 +915,6 @@ local function is_integer(data, first, last)
   return true
 end
 
---- Convert an I64 to a normal number if it's in the safe range
----@param n integer cdata I64
----@return integer|number maybeNum
-local function to_number_maybe(n)
-  return (n <= 0x1fffffffffffff and n >= -0x1fffffffffffff) and tonumber(n) or n
-end
-
 ffi.cdef [[
   union i64_converter {
     uint64_t u;
@@ -952,15 +945,15 @@ local function tibs_parse_number(data, first, last)
       first = first + 1
     end
 
-    print(require 'dump' { big = big, neg = neg })
     if big == 0ULL then
       return 0
     end
     if neg then
       i64_converter.u = 0xffffffffffffffffULL - (big - 1ULL)
-      return to_number_maybe(i64_converter.i)
+      big = i64_converter.i
+      return big < 0x1fffffffffffffLL and big >= -0x1fffffffffffffLL and tonumber(big) or big
     else
-      return to_number_maybe(big)
+      return big < 0x1fffffffffffffULL and tonumber(big) or big
     end
   else
     return tonumber(ffi_string(data + first, last - first), 10)
