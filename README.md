@@ -6,267 +6,218 @@
 
 N₂ is short for nitrogen, a simple and essential gas.  It is also a new and exciting serialization protocol that enables random access and mutability via an append-only persistent data structure.
 
-## Tagged Varint Encoding
+### Core Goals of the Design
 
-The core encoding is the tagged varint that encodes a 3 bit type and up to 64 bit associated integer.
+- **Efficient Random Access**: Allow consumers to parse only the necessary parts of a large dataset without reading the entire file.
+- **High Data Density**: Reduce total file size through aggressive deduplication of values/structures and compact object schemas.
+- **Cache-Friendly Incremental Updates**: Enable consumers to fetch only the delta when a new version of the dataset is published.
+- **Atomic Version Switching**: Allow for instantaneous activation or rollback of datas
+- **Machine Friendly**: Most integers are stored directly as native c-types *(`i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`)* that can be decoded using memory pointer casting.
 
-When integer is small, encode as a single byte.
+## Part 1: The Serialization Format
 
-```
-ttt xxxxx (where xxxxx < 11100) 0 to 27 for unsigned and -14 to 13 for zigzag signed
-```
+Every value is encoded using a reverse TLV (type-length-value) format where the value is written first, then the length, then the type header.
 
-The next 4 are fixed width encodings where the integer is encoded as `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, or `u64`.  All multi-byte values are little-endian to match WASM and modern computers.
+To save space in the serialized encoding a simple variable length integer format is used.  To decode, read the last byte first.  The upper 3 bits is the type tag.  The lower 5 bits is either the value (if less than 28) or a length type telling you to read 8, 16, 32, or 64 more bits for the integer.
 
-```
-xxxxxxxx 
-ttt 11100 ( u8 / i8 ) 0 to 255 or -128 to 127 
-
-xxxxxxxx xxxxxxxx 
-ttt 11101 ( u16 /  i16 ) 64Ki or +- 32Ki
-
-xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
-ttt 11110 ( u32 / i32 ) 4Mi or +- 2Mi
-
-xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
-xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
-ttt 11111 ( u64 / i64 ) 16Ei or += 8Ei
-```
-
-## Value Types
-
-N₂ has 8 different types that encodes nicely into 3 bits of information.
+Multi-byte values are stored in little-endian to match most host computers and web assembly.
 
 ```
-0 - EXT (data)
-1 - NUM (value)
-2 - STR (length)
-3 - BIN (length)
-4 - LST (length)
-5 - MAP (length)
-6 - PTR (offset)
-7 - REF (index)
+U5/Z5 supports 0 to 27 for unsigned and -14 to 13 for zigzag signed
+
+  ttt xxxxx (where xxxxx < 11100)
+
+U8/I8 supports 0 to 255 for unsigned or -128 to 127 for 2s complement signed
+
+  xxxxxxxx
+  ttt 11100
+
+U16/I16 supports 64Ki for unsigned or +- 32Ki for 2s complement signed
+
+  xxxxxxxx xxxxxxxx
+  ttt 11101
+
+U32/I32 supports 4Mi for unsigned or +- 2Mi for 2s complement signed
+
+  xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
+  ttt 11110
+
+U64/I64 supports 16Ei for unsigned or += 8Ei (I64) for 2s complement signed
+
+  xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
+  xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx
+  ttt 11111
 ```
 
-With the 7 types plus `EXT` we can technically make infinite types.  For example `NUM` is integer, but `EXT NUM` is decimal and `EXT LST` is array.
+There are 8 core types (using the 3 type bits) that can be paired with the signed and unsigned varints to form bytes
 
-### NUM (signed int) - Integer
-
-Simply encode any `i64` value with type tag `NUM` and the value as.
-
-```js
-function encodeInteger (num) {
-  return encodeSignedPair(NUM, num)
-}
+```lua
+0 - EXT (data) signed or unsigned depending on context
+1 - NUM (value) signed
+2 - STR (length) unsigned
+3 - BIN (length) unsigned
+4 - LST (length) unsigned
+5 - MAP (length) unsigned
+6 - PTR (offset) unsigned
+7 - REF (index) unsigned
 ```
 
-### STR (len) - String
+And while producers and consumers of these files can agree on an external dictionary for use in the `REF` type, there are 3 built-in values always there
 
-Strings are encoded by first writing the value using UTF-8 encoding.  This is followed by an unsigned tag pair with the byte length and type `STR`
-
-```js
-function encodeString(str) {
-  const len = writeUtf8(str)
-  return len + encodePair(STR, len)
-}
+```lua
+0 - nil (NIL)
+1 - true (TRUE)
+2 - false (FALSE)
+3 - user_defined (USER)
 ```
 
-### BIN (len) - Binary
+### Types Explained
 
-Binary is the same as strings except it's already serialized to bytes
+- `NUM` is for encoding integers in the `i64` range.  The signed variant of headers is used.
 
-```js
-function encodeBinary(bin) {
-  const len = writeBinary(bin)
-  return len + encodePair(BIN, len)
-}
+```lua
+0 ->
+  NUM(0) ->
+    Z5(NUM,0) ->
+    U5(NUM,0) ->
+      00000 NUM
+
+5 ->
+  NUM(5) ->
+    Z5(NUM,5) ->
+    U5(NUM,10) ->
+      01010 NUM
+
+-42 ->
+  NUM(-42) ->
+    I8(NUM,-42) ->
+    U8(NUM,214) ->
+      11010110 11110 NUM
+
+314 ->
+  NUM(314) ->
+    I16(NUM,314) ->
+    U16(NUM,314) ->
+      00111010 00000001 11101 NUM
+
+-12456 ->
+  NUM(-12345) ->
+    I16(NUM,-12345) ->
+    U16(NUM,51151) ->
+      11000111 11001111 11101 NUM
 ```
 
-### LST (len) - List
+- `NUM` + `EXT` is for encoding decimal values with `i64` base and `i64` power of 10.   For example `3.14` is encoded as `314e-2` which is `EXT(-2)` followed by `NUM(314)` which encodes in 4 bytes.
 
-Lists are encoded by first writing the items in reverse order followed by a tag pair for the total byte length of the children.
-
-```js
-function encodeList(lst) {
-  let len = 0
-  for (const val of reverseValues(lst)) {
-    len += encodeAny(val)
-  }
-  return len + encodePair(LST, len)
-}
+```lua
+3.14 ->
+  NUM(314) EXT(-2) ->
+    I16(NUM,314) Z5(EXT,-2) ->
+    U16(NUM,314) U5(EXT,3) ->
+      00111010 00000001 11101 NUM 00011 EXT
 ```
 
-### MAP (len) - Map
+- `REF` is used for primitives, but can also reference user values offsetting by 3
 
-Maps are the same, except they key/value pairs are written (value first, then key since it's reverse)
+```lua
+nil ->
+  REF(NIL) ->
+    U5(REF,NIL) ->
+      NIL REF
 
-```js
-function encodeMap(map) {
-  let len = 0
-  for (const [key, value] of reverseEntries(map)) {
-    len += encodeAny(val)
-    len += encodeAny(key)
-  }
-  return len + encodePair(MAP, len)
-}
+true ->
+  REF(TRUE) ->
+    U5(REF,TRUE) ->
+      TRUE REF
+
+false ->
+  REF(FALSE) ->
+    U5(FALSE) ->
+      FALSE REF
+
+sharedDictionary[20] -> -- the 21st item in the 0-based dictionary array
+  REF(USER + 20) ->
+  REF(23) ->
+    U5(REF,23) ->
+      10111 REF
 ```
 
-### PTR (offset) - Pointer
+- `STR` is for encoding UTF-8 Strings
 
-Pointers are simply byte offsets to other values, they are encoded an integer offsets (calculated before writing value)
+```lua
+"" ->
+  STR(0) ->
+    U5(STR,0) ->
+      00000 STR
 
-```js
-function encodePointer(target) {
-  const delta = current - target
-  return encodePair(PTR, delta)
-}
+"hi" ->
+  <6869> STR(2) ->
+    <6869> U5(STR,2) ->
+      <6869> 00010 STR
+
+"😁" ->
+  <f09f9881> STR(4) ->
+    <f09f9881> U5(STR,4) ->
+      <f09f9881> 00100 STR
 ```
 
-### REF (index) - Reference
+- `BIN` is the same, but encodes arbitrary binary data.
 
-The first values in the shared dictionary are `null`, `true`, and `false`.  Users of the format can extend this as long as both the encoder and decoder agree on what the other values are.
-
-```js
-// The default refs map
-const refs = new Map([
-  [null, 0],
-  [true, 1],
-  [false, 2],
-])
+```lua
+<deadbeef> ->
+  <deadbeef> BIN(4) ->
+    <deadbeef> U5(BIN,4) ->
+      <deadbeef> 00100 BIN
 ```
 
-This will be checked at the top of `encodeAny` so that refs supersede other encoders.
+- `PTR` is a pointer to an existing value in the document.  It is a negative byte offset from the start of this value.  The target is the high end of the target (where the head is).  The source offset if where we are about to write the ptr.
 
-```js
-function encodeAny(val) {
-  if (refs.has(val)) {
-    return encodePair(REF, refs.get(val))
-  }
-  ...
-}
+```lua
+*greeting -- Pointer to target offset 42 from offset 50
+  PTR(50 - 42)
+  PTR(8)
+    U5(PTR,8)
+      01000 PTR
+
+5 5 -- We want to encode a value twice
+5->val *val -- ptr and target are touching, offset delta is 0
+  NUM(5) PTR(0)
+    U5(NUM,10) U5(PTR,0)
+      01010 NUM 00000 PTR
 ```
 
-### EXT ... - Extensions
+- `LST` is for encoding lists of values.  The integer part is total byte length of all content (not count of item).  This enables fast skipping of values.  Also values are written in reverse order so they can be iterated in forward order.
 
-Many of the types have advanced versions where two pairs are used for the encoding.
-
-#### EXT NUM (signed base, signed pow) - Decimal
-
-For decimal, split the value into an integer base and a power of 10.  Encode the base first as `NUM`, then encode the power as `EXT`
-
-```js
-function encodeDecimal(num) {
-  const [base, pow] = decomposeDecimal(num)
-  return encodeSignedPairs(EXT, NUM, base, pow)
-}
+```lua
+[1, 2, 3] ->
+  NUM(3) NUM(2) NUM(1) LST(3) ->
+    I5(NUM,3) I5(NUM,2) I5(NUM,1) U5(LST,3) ->
+    U5(NUM,6) U5(NUM,4) U5(NUM,2) U5(LST,3) ->
+      00110 NUM 00100 NUM 00010 NUM 00011 LST
 ```
 
-#### EXT STR (len, count) - String Chain
+- `MAP` is for encoding maps from keys to values. Unlike JSON, the keys can be any value (including `PTR` or `REF`).  The values are written in verse order with values before keys so that reading can iterate in forward order.
 
-Advanced encoders may wish to deduplicate common substrings, the string chain allows n values to be combined into a single string.  You can mix strings and refs to string (and recursive string chains)
-
-```js
-function encodeStrings(vals) {
-  let len = 0
-  let count = 0
-  for (const val of reverse(vals)) {
-    len += encodeAny(val)
-    count++
-  }
-  return len + encodePairs(EXT, STR, len, count)
-}
+```lua
+{ "name": "N2" } ->
+  "N2" STR(2) "name" STR(4) MAP(8) ->
+     <4e32> U5(STR,2) <6e616d65> U5(STR,4) U5(MAP,8) ->
+       <4e32> 00010 STR <6e616d65> 00100 STR 01000 MAP
 ```
 
-#### EXT BIN (len, count) - Bin Chain
+- `MAP` + `EXT` is a map where the schema is defined by pointing to a shared array.
 
-This is the same idea except the parts are written as strings, binary, refs, string chains, bin chains.
-
-```js
-function encodeBins(vals) {
-  let len = 0
-  let count = 0
-  for (const val of reverse(vals)) {
-    len += encodeAny(val)
-    count++
-  }
-  return len + encodePairs(EXT, BIN, len, count)
-}
+```lua
+[ { "a": 1, "b": 2 }, { "a": 3, "b": 4 } ] ->
+[ "a", "b" ]->schema [ {schema 1, 2 }, {*schema 3, 4 } ] ->
+  <62> STR(1) <61> STR(1) LST(2)
+  NUM(8) NUM(6) MAP(2) EXT(3)
+  NUM(4) NUM(1) MAP(2) EXT(7)
+  LST(8) ->
+    <62> 00001 STR <61> 00001 STR 00010 LST
+    01000 NUM 00110 NUM 00010 MAP 00011 EXT
+    00100 NUM 00010 NUM 00010 MAP 00111 EXT
+    01000 LST
 ```
 
-#### EXT LST (count, width) - Array
-
-When `EXT` is followed by `LST`, the first integer is the pointer width and the second integer is the item count.
-
-The body of this is an array of fixed-width offset pointers. (offsets recorded before writing array)
-
-```js
-function encodeArray(arr) {
-  const offsets = []
-  const start = current
-  let count = 0
-  for (const val of arr) {
-    if (seen.has(val)) {
-      offsets[count++] = seen.get(val)
-    } else {
-      offsets[count++] = encodeAny(val)
-    }
-  }
-  let maxDelta = 0
-  for (const offset of offsets) {
-    maxDelta = Math.max(maxDelta, start - offset)
-  }
-  const bitsNeeded = Math.floor(Math.log2(maxDelta)) + 1
-  const width = Math.ceil(bitsNeeded / 8)
-  let len = count * width
-  for (let i = count - 1; i >= 0; i--) {
-    encodePointer(width, start - offsets[i])
-  }
-  return count * width + encodePairs(EXT, MAP, count, width)
-}
-```
-
-#### EXT MAP (count, width) - Binary Tree
-
-When `EXT` is followed by `MAP`, the first integer is the pointer width and the second integer is the item count.
-
-The body is an array of fixed-width offset pointers to the keys (the values are always behind the keys).
-
-The index entries are sorted in eytzinger layout so that a fast binary search can be performed.
-
-_**TODO**: define sorting order._
-
-
-#### EXT PTR (???, ???) - ???
-
-_Reserved for future use._
-
-#### EXT REF (???, ???)  - ???
-
-_Reserved for future use._
-
-#### EXT EXT ... (???, ???, ...) - ???
-
-We can extend even more layers if needed.
-
-_Reserved for future use._
-
-## Samples
-
-### Encode Short String
-
-Encode the string `"Hello World"`
-
-First write the string contents with UTF-8 encoding. `<48656c6c6f20576f726c64>`
-
-We now need to write the type and length.  Since this string was 11 bytes, it fits in the small size (0-27).
-
-- `xxxxx` -> 11 -> `01011`
-- `ttt` -> 2 -> `010`
-
-Combined the byte is `01011010` which is `<5a>`.
-
-The final encoding is `<48656c6c6f20576f726c64 5a>`
-
-### Encode Small Integer
-
-Small integers (-14 to 13 range) are encoded
+There are more `EXT` types reserved.  For `STR` + `EXT` might be a string chain (splitting up a string to deduplicate substrings.  `MAP` + `EXT` might be a map that points to an external schema.
