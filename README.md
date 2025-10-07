@@ -191,7 +191,7 @@ sharedDictionary[20] -> -- the 21st item in the 0-based dictionary array
 ```lua
 [1, 2, 3] ->
   NUM(3) NUM(2) NUM(1) LST(3) ->
-    I5(NUM,3) I5(NUM,2) I5(NUM,1) U5(LST,3) ->
+    Z5(NUM,3) Z5(NUM,2) Z5(NUM,1) U5(LST,3) ->
     U5(NUM,6) U5(NUM,4) U5(NUM,2) U5(LST,3) ->
       00110 NUM 00100 NUM 00010 NUM 00011 LST
 ```
