@@ -76,144 +76,144 @@ And while producers and consumers of these files can agree on an external dictio
 - `NUM` is for encoding integers in the `i64` range.  The signed variant of headers is used.
 
 ```lua
-0 ->
-  NUM(0) ->
-    Z5(NUM,0) ->
-    U5(NUM,0) ->
+0 ↩
+  NUM(0) ↩
+    Z5(NUM,0) ↩
+    U5(NUM,0) ↩
       00000 NUM
 
-5 ->
-  NUM(5) ->
-    Z5(NUM,5) ->
-    U5(NUM,10) ->
+5 ↩
+  NUM(5) ↩
+    Z5(NUM,5) ↩
+    U5(NUM,10) ↩
       01010 NUM
 
--42 ->
-  NUM(-42) ->
-    I8(NUM,-42) ->
-    U8(NUM,214) ->
+-42 ↩
+  NUM(-42) ↩
+    I8(NUM,-42) ↩
+    U8(NUM,214) ↩
       11010110 11110 NUM
 
-314 ->
-  NUM(314) ->
-    I16(NUM,314) ->
-    U16(NUM,314) ->
+314 ↩
+  NUM(314) ↩
+    I16(NUM,314) ↩
+    U16(NUM,314) ↩
       00111010 00000001 11101 NUM
 
--12456 ->
-  NUM(-12345) ->
-    I16(NUM,-12345) ->
-    U16(NUM,51151) ->
+-12456 ↩
+  NUM(-12345) ↩
+    I16(NUM,-12345) ↩
+    U16(NUM,51151) ↩
       11000111 11001111 11101 NUM
 ```
 
 - `NUM` + `EXT` is for encoding decimal values with `i64` base and `i64` power of 10.   For example `3.14` is encoded as `314e-2` which is `EXT(-2)` followed by `NUM(314)` which encodes in 4 bytes.
 
 ```lua
-3.14 ->
-  NUM(314) EXT(-2) ->
-    I16(NUM,314) Z5(EXT,-2) ->
-    U16(NUM,314) U5(EXT,3) ->
+3.14 ↩
+  NUM(314) EXT(-2) ↩
+    I16(NUM,314) Z5(EXT,-2) ↩
+    U16(NUM,314) U5(EXT,3) ↩
       00111010 00000001 11101 NUM 00011 EXT
 ```
 
 - `REF` is used for primitives, but can also reference user values offsetting by 3
 
 ```lua
-nil ->
-  REF(NIL) ->
-    U5(REF,NIL) ->
+nil ↩
+  REF(NIL) ↩
+    U5(REF,NIL) ↩
       NIL REF
 
-true ->
-  REF(TRUE) ->
-    U5(REF,TRUE) ->
+true ↩
+  REF(TRUE) ↩
+    U5(REF,TRUE) ↩
       TRUE REF
 
-false ->
-  REF(FALSE) ->
-    U5(FALSE) ->
+false ↩
+  REF(FALSE) ↩
+    U5(FALSE) ↩
       FALSE REF
 
 sharedDictionary[20] -> -- the 21st item in the 0-based dictionary array
-  REF(USER + 20) ->
-  REF(23) ->
-    U5(REF,23) ->
+  REF(USER + 20) ↩
+  REF(23) ↩
+    U5(REF,23) ↩
       10111 REF
 ```
 
 - `STR` is for encoding UTF-8 Strings
 
 ```lua
-"" ->
-  STR(0) ->
-    U5(STR,0) ->
+"" ↩
+  STR(0) ↩
+    U5(STR,0) ↩
       00000 STR
 
-"hi" ->
-  <6869> STR(2) ->
-    <6869> U5(STR,2) ->
+"hi" ↩
+  <6869> STR(2) ↩
+    <6869> U5(STR,2) ↩
       <6869> 00010 STR
 
-"😁" ->
-  <f09f9881> STR(4) ->
-    <f09f9881> U5(STR,4) ->
+"😁" ↩
+  <f09f9881> STR(4) ↩
+    <f09f9881> U5(STR,4) ↩
       <f09f9881> 00100 STR
 ```
 
 - `BIN` is the same, but encodes arbitrary binary data.
 
 ```lua
-<deadbeef> ->
-  <deadbeef> BIN(4) ->
-    <deadbeef> U5(BIN,4) ->
+<deadbeef> ↩
+  <deadbeef> BIN(4) ↩
+    <deadbeef> U5(BIN,4) ↩
       <deadbeef> 00100 BIN
 ```
 
 - `PTR` is a pointer to an existing value in the document.  It is a negative byte offset from the start of this value.  The target is the high end of the target (where the head is).  The source offset if where we are about to write the ptr.
 
 ```lua
-*greeting -- Pointer to target offset 42 from offset 50
-  PTR(50 - 42)
-  PTR(8)
-    U5(PTR,8)
+*greeting ↩ -- Pointer to target offset 42 from offset 50
+  PTR(50 - 42) ↩
+  PTR(8) ↩
+    U5(PTR,8) ↩
       01000 PTR
 
-5 5 -- We want to encode a value twice
-5->val *val -- ptr and target are touching, offset delta is 0
-  NUM(5) PTR(0)
-    U5(NUM,10) U5(PTR,0)
+5 5 ↩ -- We want to encode a value twice
+5->val *val ↩ -- ptr and target are touching, offset delta is 0
+  NUM(5) PTR(0) ↩
+    U5(NUM,10) U5(PTR,0) ↩
       01010 NUM 00000 PTR
 ```
 
 - `LST` is for encoding lists of values.  The integer part is total byte length of all content (not count of item).  This enables fast skipping of values.  Also values are written in reverse order so they can be iterated in forward order.
 
 ```lua
-[1, 2, 3] ->
-  NUM(3) NUM(2) NUM(1) LST(3) ->
-    Z5(NUM,3) Z5(NUM,2) Z5(NUM,1) U5(LST,3) ->
-    U5(NUM,6) U5(NUM,4) U5(NUM,2) U5(LST,3) ->
+[1, 2, 3] ↩
+  NUM(3) NUM(2) NUM(1) LST(3) ↩
+    Z5(NUM,3) Z5(NUM,2) Z5(NUM,1) U5(LST,3) ↩
+    U5(NUM,6) U5(NUM,4) U5(NUM,2) U5(LST,3) ↩
       00110 NUM 00100 NUM 00010 NUM 00011 LST
 ```
 
 - `MAP` is for encoding maps from keys to values. Unlike JSON, the keys can be any value (including `PTR` or `REF`).  The values are written in verse order with values before keys so that reading can iterate in forward order.
 
 ```lua
-{ "name": "N2" } ->
-  "N2" STR(2) "name" STR(4) MAP(8) ->
-     <4e32> U5(STR,2) <6e616d65> U5(STR,4) U5(MAP,8) ->
+{ "name": "N2" } ↩
+  "N2" STR(2) "name" STR(4) MAP(8) ↩
+     <4e32> U5(STR,2) <6e616d65> U5(STR,4) U5(MAP,8) ↩
        <4e32> 00010 STR <6e616d65> 00100 STR 01000 MAP
 ```
 
 - `MAP` + `EXT` is a map where the schema is defined by pointing to a shared array.
 
 ```lua
-[ { "a": 1, "b": 2 }, { "a": 3, "b": 4 } ] ->
-[ "a", "b" ]->schema [ {schema 1, 2 }, {*schema 3, 4 } ] ->
+[ { "a": 1, "b": 2 }, { "a": 3, "b": 4 } ] ↩
+[ "a", "b" ]->schema [ {schema 1, 2 }, {*schema 3, 4 } ] ↩
   <62> STR(1) <61> STR(1) LST(2)
   NUM(8) NUM(6) MAP(2) EXT(3)
   NUM(4) NUM(1) MAP(2) EXT(7)
-  LST(8) ->
+  LST(8) ↩
     <62> 00001 STR <61> 00001 STR 00010 LST
     01000 NUM 00110 NUM 00010 MAP 00011 EXT
     00100 NUM 00010 NUM 00010 MAP 00111 EXT
