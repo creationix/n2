@@ -8,6 +8,13 @@ function toHex(buf: Uint8Array) {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 }
+
+// Remove whitespace from a hex string for easier comparison
+// Also strip comments
+function stripJoin(...hex:string[]) {
+    return hex.join('').replace(/\s+/g, '');
+}
+
 test("Encodes primitive values", () => {
     // Primitives using REF
     expect(toHex(encode(null))).toEqual('e0');
@@ -109,8 +116,52 @@ test('Encodes with shared schemas', () => {
         { a: 7, b: 8 },
     ];
     const keys = Object.keys(data[0]);
-    expect(toHex(encode(keys))).toEqual('6241614184');
-    expect(toHex(encode({ a: 1, b: 2 }))).toEqual('24226241614184a7');
+    expect(toHex(encode(keys))).toEqual(stripJoin(
+      '62 41', // "b"
+      '61 41', // "a"
+      '  84' // array with 4 bytes
+    ));
+    expect(toHex(encode({ a: 1, b: 2 }))).toEqual(stripJoin(
+        '24', // 2
+        '22', // 1
+        '62 41', // "b"
+        '61 41', // "a"
+        '  84', // array with 4 bytes
+        '    a7' // object with 7 bytes
+    ));
+    expect(toHex(encode([{ a: 1, b: 2 },{ a: 3, b: 4 }]))).toEqual(stripJoin(
+        '28', // 4
+        '26', // 3
+        '62 41', // "b"
+        '61 41', // "a"
+        '  84', // array with 4 bytes
+        '    a7', // object with 7 bytes
+        '24', // 2
+        '22', // 1
+        '  c3', // Pointer to schema 3 bytes back
+        '    a3', // object with 3 bytes
+        '      8c' // array with 12 bytes
+    ));
     expect(toHex(encode(data)))
-        .toEqual('436861726c69654726e16e616d6544696442616374697665468fba426f624324e2c7a7416c6963654522e1d1a92d9c');
+        .toEqual(stripJoin(
+            '30', // 8
+            '2e', // 7
+            '62 41', // "b"
+            '61 41', // "a"
+            '  84', // array with 4 bytes
+            '    a7', // object with 7 bytes
+            '2c', // 6
+            '2a', // 5
+            '  c3', // pointer back 3 bytes to schema
+            '    a3', // object with 3 bytes
+            '28', // 4
+            '26', // 3
+            '  c7', // pointer back 7 bytes to schema
+            '    a3', // object with 3 bytes
+            '24', // 2
+            '22', // 1
+            '  cb', // pointer back 11 bytes to schema
+            '    a3', // object with 3 bytes
+            '      94' // array with 20 bytes
+        ));
 })
