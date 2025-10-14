@@ -71,10 +71,10 @@ N₂ has 8 fundamental types:
 | `STR` | UTF-8 strings | Text data |
 | `BIN` | Binary data | Raw bytes, blobs |
 | `LST` | Lists/arrays | Ordered collections |
-| `MAP` | Key-value maps | Objects, dictionaries |
+| `MAP` | Key-value maps | Objects with keys encoded as a sub-value array |
 | `PTR` | Pointers | References to existing values (deduplication) |
 | `REF` | External references | Built-in constants or shared dictionary |
-| `EXT` | Extension data | Type modifiers (e.g., decimals, schemas) |
+| `EXT` | Extension data | Type modifiers (e.g., decimals, string chains) |
 
 ### Built-in Constants
 
@@ -230,41 +230,50 @@ Lists encode their **total byte length** (not item count) and write items in **r
 
 ### MAP - Key-Value Maps
 
-Maps also write in reverse order with **values before keys**. Keys can be any type, not just strings:
+Maps write **values first** (in reverse order), then **keys as a sub-value** (array), then the MAP header. This allows the key array to be deduplicated when multiple objects share the same structure:
 
 ```lua
 { "name": "N2" } ↩
-  STR("N2") STR("name") MAP(8) ↩    -- Value first, then key, length = 8 bytes
-    <4e32> U5(STR,2) <6e616d65> U5(STR,4) U5(MAP,8) ↩
-      <4e32> 00010 STR <6e616d65> 00100 STR 01000 MAP
+  STR("N2") LST(["name"]) MAP(8) ↩    -- Value, then keys array, then MAP
+    <4e32> U5(STR,2) <6e616d65> U5(STR,4) U5(LST,5) U5(MAP,9) ↩
+      <4e32> 00010 STR <6e616d65> 00100 STR 00101 LST 01001 MAP
+
+{ "a": 1, "b": 2 } ↩
+  NUM(2) NUM(1) LST(["a","b"]) MAP(7) ↩    -- Values reversed, then keys
+    24 22 <62> U5(STR,1) <61> U5(STR,1) U5(LST,4) U5(MAP,7) ↩
+      24 22 62 41 61 41 84 a7
 ```
 
-### MAP + EXT - Schema-Based Objects
+### Automatic Schema Deduplication
 
-For objects with shared structure, `MAP + EXT` references a schema (key array) to avoid repeating keys:
+When encoding multiple objects with the same keys, the encoder automatically deduplicates the key arrays using `PTR`. This happens naturally because keys are encoded as a separate sub-value:
 
 ```lua
 -- Two objects with same keys ["a", "b"]
 [ { "a": 1, "b": 2 }, { "a": 3, "b": 4 } ] ↩
 
--- Encoded with shared schema
-[ "a", "b" ]->schema [ {schema, 1, 2}, {*schema, 3, 4} ] ↩
-  <62> STR(1) <61> STR(1) LST(2)          -- Schema: ["a", "b"]
-  NUM(2) NUM(1) MAP(2) EXT(3)              -- First object uses schema
-  NUM(4) NUM(3) MAP(2) EXT(7)              -- Second object points to schema
-  LST(8) ↩                                 -- Wrap in array
-    <62> 00001 STR <61> 00001 STR 00010 LST
-    00010 NUM 00010 NUM 00010 MAP 00011 EXT
-    00100 NUM 00110 NUM 00010 MAP 00111 EXT
-    01000 LST
+-- First object encodes keys, second object points to them
+  NUM(4) NUM(3) LST(["a","b"]) MAP(7) ↩      -- First object: full encoding
+  NUM(2) NUM(1) PTR(keys) MAP(3) ↩           -- Second object: reuses keys via pointer
+  LST(12) ↩
+
+-- Actual bytes:
+  28 26                    -- Values: 4, 3 (reversed)
+  62 41 61 41 84           -- Keys: ["b", "a"] as LST(4)
+  a7                       -- MAP(7)
+  24 22                    -- Values: 2, 1 (reversed)
+  c3                       -- PTR(3) points back 3 bytes to keys array
+  a3                       -- MAP(3)
+  8c                       -- LST(12)
 ```
+
+This automatic deduplication works for any number of objects with shared structure. The fourth object with keys `["a", "b"]` would use `PTR` to point back to the first object's key array.
 
 ### Future Extensions
 
 The `EXT` type is reserved for additional features:
 
 - `STR + EXT`: String chains for substring deduplication
-- `MAP + EXT`: Maps with external schema references
 - And more to come...
 
 ---
@@ -304,9 +313,10 @@ luajit lua/n2.test.lua
 Both implementations follow these core principles:
 
 1. **Reverse TLV Encoding**: Values written first, then length/tags
-2. **Deduplication**: Automatic use of `PTR` for repeated values
-3. **Deterministic Output**: Sorted map keys ensure consistent encoding
-4. **Little-Endian**: All multi-byte values use little-endian byte order
+2. **Automatic Deduplication**: `PTR` used for repeated values, including object key arrays
+3. **MAP Structure**: Keys encoded as a separate sub-value (array) to enable schema sharing
+4. **Deterministic Output**: Sorted map keys ensure consistent encoding
+5. **Little-Endian**: All multi-byte values use little-endian byte order
 
 ---
 
