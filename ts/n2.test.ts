@@ -1,5 +1,5 @@
 import { encode, decode } from "./n2.ts";
-
+import { parse } from "./json-with-binary.ts";
 import { expect, test } from "bun:test";
 
 
@@ -11,7 +11,7 @@ function toHex(buf: Uint8Array) {
 
 // Remove whitespace from a hex string for easier comparison
 // Also strip comments
-function stripJoin(...hex:string[]) {
+function stripJoin(...hex: string[]) {
     return hex.join('').replace(/\s+/g, '');
 }
 
@@ -117,9 +117,9 @@ test('Encodes with shared schemas', () => {
     ];
     const keys = Object.keys(data[0]);
     expect(toHex(encode(keys))).toEqual(stripJoin(
-      '62 41', // "b"
-      '61 41', // "a"
-      '  84' // array with 4 bytes
+        '62 41', // "b"
+        '61 41', // "a"
+        '  84' // array with 4 bytes
     ));
     expect(toHex(encode({ a: 1, b: 2 }))).toEqual(stripJoin(
         '24', // 2
@@ -129,7 +129,7 @@ test('Encodes with shared schemas', () => {
         '  84', // array with 4 bytes
         '    a7' // object with 7 bytes
     ));
-    expect(toHex(encode([{ a: 1, b: 2 },{ a: 3, b: 4 }]))).toEqual(stripJoin(
+    expect(toHex(encode([{ a: 1, b: 2 }, { a: 3, b: 4 }]))).toEqual(stripJoin(
         '28', // 4
         '26', // 3
         '62 41', // "b"
@@ -165,3 +165,20 @@ test('Encodes with shared schemas', () => {
             '      94' // array with 20 bytes
         ));
 })
+
+test.skip("Encodes the same as the fixtures file", async () => {
+    const fixture: Map<string, unknown[]> = parse(await Bun.file("fixtures/encode.tibs").text(), 'fixtures/encode.tibs');
+    console.log({ fixture });
+    for (const [section, tests] of fixture.entries()) {
+        for (let i = 0, l = tests.length; i < l; i += 2) {
+            const input = tests[i];
+            const expected = toHex(tests[i + 1] as Uint8Array)
+            const actual = toHex(encode(input));
+            if (actual !== expected) {
+                console.error({ section, input, expected, actual });
+                throw new Error(`Mismatch in ${section}[${i / 2}]`);
+            }
+        }
+    }
+});
+
