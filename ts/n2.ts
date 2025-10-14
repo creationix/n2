@@ -215,7 +215,7 @@ export function encode(value: unknown): Uint8Array {
 			} else if (val instanceof ArrayBuffer) {
 				encodeBin(new Uint8Array(val));
 			} else {
-				encodeMap(val as Record<string, unknown>);
+				encodeMap(val);
 			}
 		} else {
 			throw new Error(`Unsupported value: ${val}`);
