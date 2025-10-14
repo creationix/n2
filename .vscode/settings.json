@@ -1,7 +1,21 @@
 {
-    "Lua.runtime.version": "LuaJIT",
-    "editor.semanticHighlighting.enabled": true,
-    "Lua.hint.enable": false,
-    "Lua.hint.setType": true,
-    "Lua.workspace.library": []
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.tabSize": 2
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.tabSize": 2
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.tabSize": 2
+  },
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "Lua.runtime.version": "LuaJIT",
+  "editor.semanticHighlighting.enabled": true,
+  "Lua.hint.enable": false,
+  "Lua.hint.setType": true,
+  "Lua.workspace.library": []
 }

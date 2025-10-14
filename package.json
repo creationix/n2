@@ -1,0 +1,10 @@
+{
+  "name": "n2",
+  "version": "0.0.1",
+  "description": "A binary encoding for random-access documents",
+  "module": "n2.ts",
+  "scripts": {
+    "format": "biome format .",
+    "format:check": "biome format --check ."
+  }
+}
