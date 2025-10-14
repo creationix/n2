@@ -121,7 +121,16 @@ export function encode(value: unknown): Uint8Array {
 		}
 	}
 
-	function writeSignedVarInt(type: number, value: number) {
+	function writeSignedVarInt(type: number, value: number | bigint) {
+		if (typeof value === 'bigint') {
+			const part = new Uint8Array(9);
+			const view = new DataView(part.buffer);
+			view.setBigInt64(0, value, true);
+			part[8] = (type << 5) | 0x1f;
+			parts.push(part);
+			currentSize += part.length;
+			return;
+		}
 		if (!Number.isInteger(value)) {
 			throw new Error(`Value is not an integer: ${value}`);
 		}
@@ -143,7 +152,7 @@ export function encode(value: unknown): Uint8Array {
 			const part = new Uint8Array(3);
 			const view = new DataView(part.buffer);
 			view.setInt16(0, value, true);
-			part[4] = (type << 5) | 0x1d;
+			part[2] = (type << 5) | 0x1d;
 			parts.push(part);
 			currentSize += part.length;
 		} else if (value >= -0x80000000 && value < 0x80000000) {
@@ -194,6 +203,8 @@ export function encode(value: unknown): Uint8Array {
 			encodeRef(2);
 		} else if (typeof val === "number") {
 			encodeNum(val);
+		} else if (typeof val === "bigint") {
+			encodeBigInt(val);
 		} else if (typeof val === "string") {
 			encodeStr(val);
 		} else if (Array.isArray(val)) {
@@ -228,6 +239,14 @@ export function encode(value: unknown): Uint8Array {
 			return writeSignedVarInt(NUM, num);
 		}
 		throw new Error(`TODO: support floats: ${num}`);
+	}
+
+	function encodeBigInt(bi: bigint) {
+		if (Number.isSafeInteger(Number(bi))) {
+			return writeSignedVarInt(NUM, Number(bi));
+		}
+		return writeSignedVarInt(NUM, bi);
+		throw new Error(`TODO: support large integers: ${bi}`);
 	}
 
 	function encodeStr(str: string) {
@@ -284,4 +303,8 @@ export function encode(value: unknown): Uint8Array {
 		encodeAny(keys);
 		writeUnsignedVarInt(MAP, currentSize - start);
 	}
+}
+
+export function decode(buffer: Uint8Array): unknown {
+
 }
