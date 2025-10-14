@@ -2,7 +2,8 @@
 
 ![N2 Logo](www/n2logo.jpg)
 
-[![N2 LuaJIT Tests](https://github.com/creationix/n2/actions/workflows/test.yaml/badge.svg?event=push)](https://github.com/creationix/n2/actions/workflows/test.yaml)
+[![N2 LuaJIT Tests](https://github.com/creationix/n2/actions/workflows/lua-tests.yaml/badge.svg?event=push)](https://github.com/creationix/n2/actions/workflows/lua-tests.yaml)
+[![N2 Bun Tests](https://github.com/creationix/n2/actions/workflows/bun-tests.yaml/badge.svg?event=push)](https://github.com/creationix/n2/actions/workflows/bun-tests.yaml)
 
 N₂ is short for nitrogen, a simple and essential gas.  It is also a new and exciting serialization protocol that enables random access and mutability via an append-only persistent data structure.
 
