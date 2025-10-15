@@ -51,7 +51,7 @@ export function parse(input: string, filename = "[memory]"): any {
 
   function parseValue(): any {
     skipWhitespaceAndComments()
-    const char = input[index]
+    const char = input[index] as string
     if (char === "{") {
       return parseMap()
     } else if (char === "[") {
@@ -60,7 +60,7 @@ export function parse(input: string, filename = "[memory]"): any {
       return parseString()
     } else if (char === "<") {
       return parseBinary()
-    } else if (/[0-9\-]/.test(char)) {
+    } else if (/[0-9-]/.test(char)) {
       return parseNumber()
     } else if (input.startsWith("true", index)) {
       index += 4
