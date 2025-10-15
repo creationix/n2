@@ -11,4 +11,4 @@ jobs:
           bun-version: latest # Or a specific version like '1.2.0'
     
       - name: Run tests
-        run: bun test
+        run: cd ts && bun test
