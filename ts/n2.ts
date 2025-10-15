@@ -1,7 +1,8 @@
+import { parse } from "./json-with-binary.ts";
 import { makeKey } from './structural-key.ts';
 
-const EXT = 0 // 000
-const NUM = 1 // 001
+const NUM = 0; // 000
+const EXT = 1; // 001
 const STR = 2 // 010
 const BIN = 3 // 011
 const LST = 4 // 100
@@ -215,7 +216,7 @@ export function encode(value: unknown): Uint8Array {
 			} else if (val instanceof ArrayBuffer) {
 				encodeBin(new Uint8Array(val));
 			} else {
-				encodeMap(val);
+				encodeMap(val as Record<string, unknown>);
 			}
 		} else {
 			throw new Error(`Unsupported value: ${val}`);
@@ -238,7 +239,10 @@ export function encode(value: unknown): Uint8Array {
 		if (Number.isInteger(num)) {
 			return writeSignedVarInt(NUM, num);
 		}
-		throw new Error(`TODO: support floats: ${num}`);
+		const [base, power] = splitNumber(num);
+		writeSignedVarInt(NUM, base);
+		writeSignedVarInt(EXT, power);
+		return;
 	}
 
 	function encodeBigInt(bi: bigint) {
@@ -303,6 +307,28 @@ export function encode(value: unknown): Uint8Array {
 		encodeAny(keys);
 		writeUnsignedVarInt(MAP, currentSize - start);
 	}
+}
+
+// Given a double value, split it into a base and power of 10.
+// For example, 1234.5678 would be split into 12345678 and -4.
+export function splitNumber(val: number, precision = 14): [number, number] {
+	const str = val.toExponential(precision);
+	// Split the string into base and exponent
+	const match = str.match(/^([+-]?\d)\.(\d*?)0*(?:e([+-]?\d+))$/);
+	if (!match) {
+		throw new Error(`Invalid number format: ${str}`);
+	}
+	const [, baseInt, baseFrac, exponentStr] = match;
+	if (
+		baseInt === undefined ||
+		baseFrac === undefined ||
+		exponentStr === undefined
+	) {
+		throw new Error(`Invalid number format: ${str}`);
+	}
+	const exponent = parseInt(exponentStr, 10) - baseFrac.length;
+	const base = parseInt(baseInt + baseFrac, 10);
+	return [base, exponent];
 }
 
 export function decode(buffer: Uint8Array): unknown {
