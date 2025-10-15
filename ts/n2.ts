@@ -1,4 +1,3 @@
-import { parse } from "./json-with-binary.ts";
 import { makeKey } from './structural-key.ts';
 
 const NUM = 0; // 000
@@ -324,16 +323,24 @@ export function encode(value: unknown): Uint8Array {
 		writeUnsignedVarInt(LST, currentSize - start);
 	}
 
-	function encodeMap(map: Record<string, unknown>) {
+	function encodeMap(map: Record<string, unknown> | Map<unknown, unknown>) {
 		const start = currentSize;
-		const entries = Object.entries(map).sort((a, b) =>
-			a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
-		);
-		const keys = entries.map((e) => e[0]);
-		const values = entries.map((e) => e[1]);
-		writeList(values);
-		// Encode keys as own sub-value so it can be deduplicated as a whole
-		encodeAny(keys);
+		const entries =
+			map instanceof Map ? Array.from(map.entries()) : Object.entries(map);
+		for (let i = entries.length - 1; i >= 0; i--) {
+			const [key, entry] = entries[i]!;
+			encodeAny(entry);
+			encodeAny(key);
+		}
+		// TODO: figure out how we want to do schema sharing
+		// const entries = Object.entries(map).sort((a, b) =>
+		// 	a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
+		// );
+		// const keys = entries.map((e) => e[0]);
+		// const values = entries.map((e) => e[1]);
+		// writeList(values);
+		// // Encode keys as own sub-value so it can be deduplicated as a whole
+		// encodeAny(keys);
 		writeUnsignedVarInt(MAP, currentSize - start);
 	}
 }

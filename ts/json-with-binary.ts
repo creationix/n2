@@ -219,7 +219,6 @@ export function parse(input: string, filename = "[memory]"): any {
 				throw new SyntaxError(`Invalid number at position ${index}`);
 			}
 		}
-		console.log({ numStr, num });
 		return num;
 	}
 
