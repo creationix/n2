@@ -72,6 +72,30 @@ export function encode(value: unknown): Uint8Array {
   // Map from value to estimated cost of encoding it
   const costs = new Map<unknown, number>()
 
+  const schemaCounts: Record<string, number> = {}
+
+  function countSchema(val: unknown) {
+    if (val && typeof val === "object") {
+      if (Array.isArray(val)) {
+        for (const item of val) {
+          countSchema(item)
+        }
+        return
+      }
+      const keys = val instanceof Map ? Array.from(val.keys()) : Object.keys(val)
+      if (keys.length > 1) {
+        const schemaKey = makeKey(keys)
+        if (schemaKey && typeof schemaKey === "string") {
+          schemaCounts[schemaKey] = (schemaCounts[schemaKey] ?? 0) + 1
+        }
+      }
+      const values = val instanceof Map ? val.values() : Object.values(val)
+      for (const value of values) {
+        countSchema(value)
+      }
+    }
+  }
+  countSchema(value)
   encodeAny(value)
 
   const result = new Uint8Array(currentSize)
@@ -173,7 +197,7 @@ export function encode(value: unknown): Uint8Array {
   }
 
   // Returns the offset of the written value (or offset of reused value)
-  function encodeAny(val: unknown): number {
+  function encodeAny(val: unknown, skipPointer = false): number {
     const key = makeKey(val, 2)
     const seenOffset = seen.get(key)
     if (seenOffset !== undefined) {
@@ -191,6 +215,7 @@ export function encode(value: unknown): Uint8Array {
                 ? 5
                 : 9
       if (estimatedCost > estimatedPtrCost) {
+        if (skipPointer) { return seenOffset }
         return encodePtr(seenOffset)
       }
     }
@@ -322,24 +347,34 @@ export function encode(value: unknown): Uint8Array {
     writeUnsignedVarInt(LST, currentSize - start)
   }
 
+  function encodeSchemaMap(map: Record<string, unknown> | Map<unknown, unknown>, keys: unknown[]) {
+    const target = encodeAny(keys, true)
+    const start = currentSize
+    const values = map instanceof Map ? Array.from(map.values()) : Object.values(map)
+    for (let i = values.length - 1; i >= 0; i--) {
+      encodeAny(values[i])
+    }
+    writeUnsignedVarInt(MAP, currentSize - start)
+    writeUnsignedVarInt(EXT, currentSize - target)
+  }
+
   function encodeMap(map: Record<string, unknown> | Map<unknown, unknown>) {
     const start = currentSize
+    const keys = map instanceof Map ? Array.from(map.keys()) : Object.keys(map)
+    const schemaKey = makeKey(keys)
+    const schemaCount = schemaKey ? schemaCounts[schemaKey] : 0
+    if (schemaCount > 1) {
+      return encodeSchemaMap(map, keys)
+    }
     const entries =
       map instanceof Map ? Array.from(map.entries()) : Object.entries(map)
     for (let i = entries.length - 1; i >= 0; i--) {
-      const [key, entry] = entries[i]!
-      encodeAny(entry)
+      const entry = entries[i]
+      if (!entry) continue
+      const [key, value] = entry
+      encodeAny(value)
       encodeAny(key)
     }
-    // TODO: figure out how we want to do schema sharing
-    // const entries = Object.entries(map).sort((a, b) =>
-    // 	a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
-    // );
-    // const keys = entries.map((e) => e[0]);
-    // const values = entries.map((e) => e[1]);
-    // writeList(values);
-    // // Encode keys as own sub-value so it can be deduplicated as a whole
-    // encodeAny(keys);
     writeUnsignedVarInt(MAP, currentSize - start)
   }
 }

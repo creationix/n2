@@ -177,43 +177,46 @@ test("Encodes with shared schemas", () => {
     ),
   ).toEqual(
     stripJoin(
-      "08", // 4
-      "62 41", // "b"
-      "06", // 3
-      "61 41", // "a"
-      "  a6", // object with 6 bytes
-      "04", // 2
-      "c5", // pointer to "b" 5 bytes back
-      "02", // 1
-      "c4", // pointer to "a" 4 bytes back
-      "  a4", // object with 3 bytes
-      "    8c", // array with 12 bytes
+      "  62 41", // "b"
+      "  61 41", // "a"
+      "84",      // array with 4 bytes"
+
+      "  08",  // 4
+      "  06",  // 3
+      "a2 23", // object with 2 bytes and pointer back 3 to schema
+
+      "  04",  // 2
+      "  02",  // 1
+      "a2 27", // object with 2 bytes and pointer back 8 to schema
+
+      "8d", // array with 13 bytes
     ),
   )
   expect(toHex(encode(data))).toEqual(
     stripJoin(
-      "10", // 8
-      "62 41", // "b"
-      "0e", // 7
-      "61 41", // "a"
-      "    a6", // object with 7 bytes
-      "0c", // 6
-      "  c5", // pointer back 5 bytes to "b"
-      "0a", // 5
-      "  c4", // pointer back 4 bytes to "a"
-      "    a4", // object with 4 bytes
-      "08", // 4
-      "  ca", // pointer back 10 bytes to "b"
-      "06", // 3
-      "  c9", // pointer back 9 bytes to "a"
-      "    a4", // object with 4 bytes
-      "04", // 2
-      "  cf", // pointer back 15 bytes to "b"
-      "02", // 1
-      "  ce", // pointer back 14 bytes to "a"
-      "    a4", // object with 4 bytes
-      "      96", // array with 22 bytes
+      "  6241", // "b"
+      "  6141", // "a"
+      "84",     // array with 4 bytes
+
+      "  10",  // 8
+      "  0e",  // 7
+      "a2 23", // object with 2 bytes and pointer back 3 to schema
+
+      "  0c",  // 6
+      "  0a",  // 5
+      "a2 27", // object with 2 bytes and pointer back 7 to schema
+
+      "  08",  // 4
+      "  06",  // 3
+      "a2 2b", // object with 2 bytes and pointer back 11 to schema
+
+      "  04",  // 2
+      "  02",  // 1
+      "a2 2f", // object with 2 bytes and pointer back 15 to schema
+
+      "95", // array with 22 bytes
     ),
+
   )
 });
 
@@ -265,7 +268,7 @@ test("Encodes the same as the fixtures file", async () => {
       const expected = toHex(tests[i + 1] as Uint8Array)
       const actual = toHex(encode(input))
       if (actual !== expected) {
-        console.error({ section, input, expected, actual })
+        console.error({ section, input, expected, actual__: actual })
         throw new Error(`Mismatch in ${section}[${i / 2}]`)
       }
     }
