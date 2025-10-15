@@ -14,7 +14,7 @@ function stripJoin(...hex: string[]) {
 	return hex.join("").replace(/\s+/g, "");
 }
 
-test.only("splitting numbers", () => {
+test("splitting numbers", () => {
 	expect(splitNumber(0)).toEqual([0, 0]);
 	expect(splitNumber(1)).toEqual([1, 0]);
 	expect(splitNumber(10)).toEqual([1, 1]);
@@ -24,6 +24,7 @@ test.only("splitting numbers", () => {
 	expect(splitNumber(1.2345e-10)).toEqual([12345, -14]);
 	expect(splitNumber(-1.2345e-10)).toEqual([-12345, -14]);
 	expect(splitNumber(1.2345e10)).toEqual([12345, 6]);
+	expect(splitNumber(Math.PI)).toEqual([31415926535898, -13]);
 
 	for (let i = -200; i <= 200; i++) {
 		let [base, exponent] = splitNumber(0);
@@ -221,8 +222,8 @@ test("Encodes with shared schemas", () => {
 
 test("Encodes the same as the fixtures file", async () => {
 	const fixture: Map<string, unknown[]> = parse(
-		await Bun.file("fixtures/encode.tibs").text(),
-		"fixtures/encode.tibs",
+		await Bun.file("../fixtures/encode.tibs").text(),
+		"../fixtures/encode.tibs",
 	);
 	console.log({ fixture });
 	for (const [section, tests] of fixture.entries()) {

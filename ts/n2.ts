@@ -236,21 +236,50 @@ export function encode(value: unknown): Uint8Array {
 	}
 
 	function encodeNum(num: number) {
-		if (Number.isInteger(num)) {
-			return writeSignedVarInt(NUM, num);
-		}
 		const [base, power] = splitNumber(num);
+		if (power < 0 || num >= 0x8000000000000000 || num < -0x8000000000000000) {
+			// If the number has a decimal component or is too big, we have to encode it as a decimal
+			encodeDecimal(base, power);
+			return;
+		}
+		const floatCost = signedVarIntSize(base) + signedVarIntSize(power);
+		const intCost = signedVarIntSize(num);
+		if (floatCost < intCost) {
+			encodeDecimal(base, power);
+		} else {
+			encodeInteger(num);
+		}
+	}
+
+	function encodeDecimal(base: number, power: number) {
 		writeSignedVarInt(NUM, base);
 		writeSignedVarInt(EXT, power);
-		return;
+	}
+
+	function encodeInteger(num: number) {
+		writeSignedVarInt(NUM, num);
+	}
+
+	function signedVarIntSize(value: number): number {
+		if (value >= -14 && value < 14) {
+			return 1;
+		} else if (value >= -0x80 && value < 0x80) {
+			return 2;
+		} else if (value >= -0x8000 && value < 0x8000) {
+			return 3;
+		} else if (value >= -0x80000000 && value < 0x80000000) {
+			return 5;
+		} else {
+			return 9;
+		}
 	}
 
 	function encodeBigInt(bi: bigint) {
-		if (Number.isSafeInteger(Number(bi))) {
-			return writeSignedVarInt(NUM, Number(bi));
+		const num = Number(bi);
+		if (BigInt(num) !== bi) {
+			return writeSignedVarInt(NUM, bi);
 		}
-		return writeSignedVarInt(NUM, bi);
-		throw new Error(`TODO: support large integers: ${bi}`);
+		return encodeNum(num);
 	}
 
 	function encodeStr(str: string) {
@@ -309,26 +338,50 @@ export function encode(value: unknown): Uint8Array {
 	}
 }
 
+// Input is an integer string.
+// returns base and number of zeroes that were trimmed
+function trimZeroes(str: string): [number, number] {
+	const trimmed = str.replace(/0+$/, "");
+	const zeroCount = str.length - trimmed.length;
+	return [parseInt(trimmed, 10), zeroCount];
+}
+
 // Given a double value, split it into a base and power of 10.
 // For example, 1234.5678 would be split into 12345678 and -4.
-export function splitNumber(val: number, precision = 14): [number, number] {
-	const str = val.toExponential(precision);
-	// Split the string into base and exponent
-	const match = str.match(/^([+-]?\d)\.(\d*?)0*(?:e([+-]?\d+))$/);
-	if (!match) {
-		throw new Error(`Invalid number format: ${str}`);
+export function splitNumber(val: number): [number, number] {
+	if (Number.isInteger(val)) {
+		if (Math.abs(val) < 10) {
+			return [val, 0];
+		}
+		if (Math.abs(val) < 9.999999999999999e20) {
+			return trimZeroes(val.toString());
+		}
 	}
-	const [, baseInt, baseFrac, exponentStr] = match;
-	if (
-		baseInt === undefined ||
-		baseFrac === undefined ||
-		exponentStr === undefined
-	) {
-		throw new Error(`Invalid number format: ${str}`);
+	// Try decimal representation first
+	const decStr = val.toPrecision(14).match(/^([-+]?\d+)(?:\.(\d+))?$/);
+	if (decStr) {
+		const b1 = parseInt((decStr[1] ?? "") + (decStr[2] ?? ""), 10);
+		const e1 = -(decStr[2]?.length ?? 0);
+		if (e1 === 0) {
+			return [b1, 0];
+		}
+		const [b2, e2] = splitNumber(b1);
+		return [b2, e1 + e2];
 	}
-	const exponent = parseInt(exponentStr, 10) - baseFrac.length;
-	const base = parseInt(baseInt + baseFrac, 10);
-	return [base, exponent];
+	// Then try scientific notation
+	const sciStr = val
+		.toExponential(14)
+		.match(/^([+-]?\d+)(?:\.(\d+))?(?:e([+-]?\d+))$/);
+	if (sciStr) {
+		// Count the decimal places
+		const e1 = -(sciStr[2]?.length ?? 0);
+		// Parse the exponent
+		const e2 = parseInt(sciStr[3] ?? "0", 10);
+		// Parse left of e as integer with zeroes trimmed
+		const [b1, e3] = trimZeroes(sciStr[1] + (sciStr[2] ?? ""));
+		return [b1, e1 + e2 + e3];
+	}
+	throw new Error(`Invalid number format: ${val}`);
 }
 
 export function decode(buffer: Uint8Array): unknown {

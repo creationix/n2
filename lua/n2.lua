@@ -386,7 +386,7 @@ local function encode(root_val, write, aggressive)
   local function encode_number(val)
     local base, power = split_number(val)
     if power < 0 or val > 0x7FFFFFFFFFFFFFFF or val < -0x8000000000000000 then
-      -- If the number has a decimal component or is too bug, we have to encode it as a float
+      -- If the number has a decimal component or is too big, we have to encode it as a float
       encode_float(val, base, power)
       return
     end
