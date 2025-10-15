@@ -217,7 +217,7 @@ test("Encodes with shared schemas", () => {
 	);
 });
 
-test.skip("Encodes the same as the fixtures file", async () => {
+test("Encodes the same as the fixtures file", async () => {
 	const fixture: Map<string, unknown[]> = parse(
 		await Bun.file("../fixtures/encode.tibs").text(),
 		"../fixtures/encode.tibs",
