@@ -129,28 +129,28 @@
       {"color":"yellow","fruits":["apple","banana"]}
     ],
       <
-        66727569747346 // "fruits"
-        636f6c6f7245   // "color"
-      8d               // [...]
-
           62616e616e6146 // "banana"
           6170706c6545   // "apple"
         8d               // [...]
         79656c6c6f7746   // "yellow"
-      23bc 37            // {...} with schema pointer to [color,fruits]
 
-          cb           // pointer to "apple"
+          66727569747346 // "fruits"
+          636f6c6f7245   // "color"
+        8d               // [...]
+      23bc 22            // {...} with schema pointer to [color,fruits]
+
+          d9           // pointer to "apple"
         81             // [...]
         677265656e45   // "green"
-      a8 21            // {...} with schema pointer to [color,fruits]
+      a8 2c            // {...} with schema pointer to [color,fruits]
 
-          3c737472617762657272794a // "strawberry"
-          21dc                     // pointer to "apple"
-        8d                         // [...]
-        72656443                   // "red"
-      b2 363c                      // {...} with schema pointer to [color,fruits]
+          737472617762657272794a // "strawberry"
+          2edc                   // pointer to "apple"
+        8d                       // [...]
+        72656443                 // "red"
+      b2 203c                    // {...} with schema pointer to [color,fruits]
 
-      469c // [...]
+      459c // [...]
       >
   ],
 }

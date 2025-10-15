@@ -171,42 +171,42 @@ test("Encodes with shared schemas", () => {
     ),
   ).toEqual(
     stripJoin(
-      "  62 41", // "b"
-      "  61 41", // "a"
-      "84",      // array with 4 bytes"
 
-      "  08",  // 4
-      "  06",  // 3
-      "a7 23", // object with 2 bytes and pointer back 3 to schema
+      "  08",     // 4
+      "  06",     // 3
+      "    6241", // "b"
+      "    6141", // "a"
+      "  84",     // schema array with 4 bytes"
+      "a7 21",    // object with 7 bytes and pointer to schema
 
       "  04",  // 2
       "  02",  // 1
-      "a2 27", // object with 2 bytes and pointer back 8 to schema
+      "a2 25", // object with 2 bytes and pointe to schema
 
       "8d", // array with 13 bytes
     ),
   )
   expect(toHex(encode(data))).toEqual(
     stripJoin(
-      "  6241", // "b"
-      "  6141", // "a"
-      "84",     // array with 4 bytes
 
-      "  10",  // 8
-      "  0e",  // 7
-      "a7 23", // object with 2 bytes and pointer back 3 to schema
+      "  10",     // 8
+      "  0e",     // 7
+      "    6241", // "b"
+      "    6141", // "a"
+      "  84",     // schema array with 4 bytes
+      "a7 21",    // object with 2 bytes and pointer back 3 to schema
 
       "  0c",  // 6
       "  0a",  // 5
-      "a2 27", // object with 2 bytes and pointer back 7 to schema
+      "a2 25", // object with 2 bytes and pointer back 7 to schema
 
       "  08",  // 4
       "  06",  // 3
-      "a2 2b", // object with 2 bytes and pointer back 11 to schema
+      "a2 29", // object with 2 bytes and pointer back 11 to schema
 
       "  04",  // 2
       "  02",  // 1
-      "a2 2f", // object with 2 bytes and pointer back 15 to schema
+      "a2 2d", // object with 2 bytes and pointer back 15 to schema
 
       "95", // array with 21 bytes
     ),
