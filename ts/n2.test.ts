@@ -217,6 +217,42 @@ test("Encodes with shared schemas", () => {
   )
 });
 
+test('Encodes string splitting correctly', () => {
+  const paths = [
+    "/section/first/chapter/second/where-the-wild-things|are",
+    "/section/first/chapter/second/where-the-wild-things|were",
+    "/section/first/chapter/second/where-the-wild-things|will-be",
+  ]
+  const encoded = encode(paths)
+  expect(toHex(encoded)).toEqual(stripJoin(
+    "  7c77696c6c2d626548", // "|will-be"
+    "  2f77686572652d7468652d77696c642d7468696e677356", // "/where-the-wild-things"
+    "  2f7365636f6e6447",   // "/second"
+    "  2f6368617074657248", // "/chapter"
+    "  2f666972737446",     // "/first"
+    "  2f73656374696f6e48", // "/section"
+    "46 423c",              // STR(count 6) EXT(size 70)
+
+    "  7c7765726545", // "|were"
+    "  2adc",         // Pointer 42 back to previous "/where-the-wild-things"
+    "  24dc",         // Pointer 36 back to previous "/second"
+    "  1ddc",         // Pointer 29 back to previous "/chapter"
+    "  d8",           // Pointer 24 back to previous "/first"
+    "  d0",           // Pointer 16 back to previous "/section"
+    "46 2f",          // STR(count 6) EXT(size 15)
+
+    "  7c61726544", // "|are"
+    "  39dc",       // Pointer 57 back to previous "/where-the-wild-things"
+    "  33dc",       // Pointer 51 back to previous "/second"
+    "  2cdc",       // Pointer 44 back to previous "/chapter"
+    "  27dc",       // Pointer 39 back to previous "/first"
+    "  20dc",       // Pointer 32 back to previous "/section"
+    "46 30",        // STR(count 6) EXT(size 16)
+
+    "659c" // ARR(size 101)
+  ))
+})
+
 test("Encodes the same as the fixtures file", async () => {
   const fixture: Map<string, unknown[]> = parse(
     await Bun.file("../fixtures/encode.tibs").text(),

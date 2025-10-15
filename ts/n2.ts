@@ -283,11 +283,10 @@ export function encode(value: unknown): Uint8Array {
 
   function encodeStr(str: string) {
     if (str.length >= 28) {
-  // Attempt to split longer strings to look for reuse
+      // Attempt to split longer strings to look for reuse
       const parts = str.match(/[^a-z0-9]*[a-z0-9 _-]*/gi)?.filter(Boolean)
       if (parts && parts.length > 1) {
         const start = currentSize
-
         for (let i = parts.length - 1; i >= 0; i--) {
           encodeAny(parts[i])
         }
