@@ -110,23 +110,23 @@ test("Encodes arrays", () => {
 	expect(toHex(encode([]))).toEqual("80");
 	expect(toHex(encode([1, 2, 3]))).toEqual("06040283");
 	expect(toHex(encode([null, true, false]))).toEqual("e2e1e083");
-	expect(toHex(encode([1, [2, [3]]]))).toEqual("268124832285");
+	expect(toHex(encode([1, [2, [3]]]))).toEqual("068104830285");
 	expect(toHex(encode(new Array(30).fill(0).map((_, i) => i)))).toEqual(
-		"1d3c1c3c1b3c1a3c193c183c173c163c153c143c133c123c113c103c0f3c0e3c3a38363432302e2c2a28262422202e9c",
+		"1d1c1c1c1b1c1a1c191c181c171c161c151c141c131c121c111c101c0f1c0e1c1a18161412100e0c0a08060402002e9c",
 	);
 });
 
 test("Encodes objects", () => {
 	expect(toHex(encode({}))).toEqual("a0");
-	expect(toHex(encode({ a: 1, b: 2 }))).toEqual("24226241614184a7");
+	expect(toHex(encode({ a: 1, b: 2 }))).toEqual("046241026141a6");
 	expect(toHex(encode({ foo: "bar", baz: [1, 2, 3] }))).toEqual(
-		"6261724326242283666f6f4362617a4388b1",
+		"0604028362617a4362617243666f6f43b0",
 	);
 	expect(toHex(encode({ nested: { a: { b: { c: 3 } } } }))).toEqual(
-		"26634182a4624182a8614182ac6e65737465644687b5",
+		"066341a36241a66141a96e657374656446b1",
 	);
 	expect(toHex(encode({ a: 1, b: { c: 2, d: [3, 4] }, e: "five" }))).toEqual(
-		"6669766544282682246441634184a92265416241614186b7",
+		"666976654465410806826441046341a86241026141b5",
 	);
 });
 
@@ -135,16 +135,16 @@ test("Encodes with references", () => {
 		"72657065617446c0c189",
 	);
 	expect(toHex(encode({ a: "same", b: "same", c: "same" }))).toEqual(
-		"73616d6544c0c163416241614186ae",
+		"73616d65446341c26241c56141ad",
 	);
 	const obj = { key: "value" };
-	expect(toHex(encode(obj))).toEqual("76616c7565456b65794384ab");
-	expect(toHex(encode([obj, obj, obj]))).toEqual(
-		"76616c7565456b65794384abc0c18e",
-	);
+	expect(toHex(encode(obj))).toEqual("76616c7565456b657943aa");
+	expect(toHex(encode([obj, obj, obj]))).toEqual("76616c7565456b657943aac0c18d");
 });
 
 test("Encodes with shared schemas", () => {
+	// TODO: Update these after shared schemas are designed and implemented
+	// For now this just test pointers are used for keys
 	const data = [
 		{ a: 1, b: 2 },
 		{ a: 3, b: 4 },
@@ -192,25 +192,27 @@ test("Encodes with shared schemas", () => {
 	);
 	expect(toHex(encode(data))).toEqual(
 		stripJoin(
-			"30", // 8
-			"2e", // 7
+			"10", // 8
 			"62 41", // "b"
+			"0e", // 7
 			"61 41", // "a"
-			"  84", // array with 4 bytes
-			"    a7", // object with 7 bytes
-			"2c", // 6
-			"2a", // 5
-			"  c3", // pointer back 3 bytes to schema
-			"    a3", // object with 3 bytes
-			"28", // 4
-			"26", // 3
-			"  c7", // pointer back 7 bytes to schema
-			"    a3", // object with 3 bytes
-			"24", // 2
-			"22", // 1
-			"  cb", // pointer back 11 bytes to schema
-			"    a3", // object with 3 bytes
-			"      94", // array with 20 bytes
+			"    a6", // object with 7 bytes
+			"0c", // 6
+			"  c5", // pointer back 5 bytes to "b"
+			"0a", // 5
+			"  c4", // pointer back 4 bytes to "a"
+			"    a4", // object with 4 bytes
+			"08", // 4
+			"  ca", // pointer back 10 bytes to "b"
+			"06", // 3
+			"  c9", // pointer back 9 bytes to "a"
+			"    a4", // object with 4 bytes
+			"04", // 2
+			"  cf", // pointer back 15 bytes to "b"
+			"02", // 1
+			"  ce", // pointer back 14 bytes to "a"
+			"    a4", // object with 4 bytes
+			"      96", // array with 22 bytes
 		),
 	);
 });
