@@ -348,8 +348,8 @@ export function encode(value: unknown): Uint8Array {
   }
 
   function encodeSchemaMap(map: Record<string, unknown> | Map<unknown, unknown>, keys: unknown[]) {
-    const target = encodeAny(keys, true)
     const start = currentSize
+    const target = encodeAny(keys, true)
     const values = map instanceof Map ? Array.from(map.values()) : Object.values(map)
     for (let i = values.length - 1; i >= 0; i--) {
       encodeAny(values[i])

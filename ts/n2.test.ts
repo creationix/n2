@@ -143,37 +143,31 @@ test("Encodes with references", () => {
 });
 
 test("Encodes with shared schemas", () => {
-  // TODO: Update these after shared schemas are designed and implemented
-  // For now this just test pointers are used for keys
   const data = [
     { a: 1, b: 2 },
     { a: 3, b: 4 },
     { a: 5, b: 6 },
     { a: 7, b: 8 },
   ]
-  const keys = Object.keys(data[0])
-  expect(toHex(encode(keys))).toEqual(
+  expect(toHex(encode(Object.keys(data[0])))).toEqual(
     stripJoin(
-      "62 41", // "b"
-      "61 41", // "a"
-      "  84", // array with 4 bytes
+      "  6241", // "b"
+      "  6141", // "a"
+      "84",     // array with 4 bytes
     ),
   )
-  expect(toHex(encode({ a: 1, b: 2 }))).toEqual(
+  expect(toHex(encode(data[0]))).toEqual(
     stripJoin(
-      "04", // 2
-      "62 41", // "b"
-      "02", // 1
-      "61 41", // "a"
-      "    a6", // object with 6 bytes
+      "  04",   // 2
+      "  6241", // "b"
+      "  02",   // 1
+      "  6141", // "a"
+      "a6",     // object with 6 bytes
     ),
   )
   expect(
     toHex(
-      encode([
-        { a: 1, b: 2 },
-        { a: 3, b: 4 },
-      ]),
+      encode(data.slice(0, 2)),
     ),
   ).toEqual(
     stripJoin(
@@ -183,7 +177,7 @@ test("Encodes with shared schemas", () => {
 
       "  08",  // 4
       "  06",  // 3
-      "a2 23", // object with 2 bytes and pointer back 3 to schema
+      "a7 23", // object with 2 bytes and pointer back 3 to schema
 
       "  04",  // 2
       "  02",  // 1
@@ -200,7 +194,7 @@ test("Encodes with shared schemas", () => {
 
       "  10",  // 8
       "  0e",  // 7
-      "a2 23", // object with 2 bytes and pointer back 3 to schema
+      "a7 23", // object with 2 bytes and pointer back 3 to schema
 
       "  0c",  // 6
       "  0a",  // 5
@@ -214,7 +208,7 @@ test("Encodes with shared schemas", () => {
       "  02",  // 1
       "a2 2f", // object with 2 bytes and pointer back 15 to schema
 
-      "95", // array with 22 bytes
+      "95", // array with 21 bytes
     ),
 
   )
