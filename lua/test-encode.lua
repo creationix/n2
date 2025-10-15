@@ -15,6 +15,8 @@ local function readfile(path)
   local f = assert(io.open(path, 'r'))
   local data = assert(f:read '*a')
   f:close()
+  -- Strip comments since Tibs doesn't support them
+  data = data:gsub('//[^\n]*\n', '\n')
   return Tibs.decode(data, path)
 end
 
