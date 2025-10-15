@@ -5,5 +5,8 @@
   "Lua.runtime.version": "LuaJIT",
   "Lua.hint.enable": false,
   "Lua.hint.setType": true,
-  "Lua.workspace.library": []
+  "Lua.workspace.library": [],
+  "javascript.format.semicolons": "remove",
+  "typescript.format.semicolons": "remove",
+  "editor.defaultFormatter": "vscode.typescript-language-features"
 }
