@@ -94,6 +94,17 @@ local function to_hex(data)
   return string.format('%s', table.concat(bytes, ''))
 end
 
+---@param data ffi.cdata*
+---@return string
+local function cdata_to_hex(data)
+  local bytes = {}
+  for i = 1, ffi.sizeof(data) do
+    local b = data[i - 1]
+    bytes[i] = string.format('%02x', b)
+  end
+  return string.format('%s', table.concat(bytes, ''))
+end
+
 local function test(value, expected, ...)
   print()
   print(dump(value))
@@ -158,14 +169,14 @@ test(0x80000000, '00000080000000001f')
 test(0x7fffffffffffffffLL, 'ffffffffffffff7f1f')
 test(-0x8000000000000000LL, '00000000000000801f')
 
-test(1e10, '0234')
-test(1e20, '02143c')
-test(1e30, '021e3c')
+test(F64(1e10), '0234')
+test(F64(1e20), '02143c')
+test(F64(1e30), '021e3c')
 test(123.456, '40e201001e25')
 test(12345.6789, '15cd5b071e27')
 test(math.pi, 'da362497921c00001f39')
-test(math.pi * 1e300, 'da362497921c00001f1f013d')
-test(math.pi * 1e-300, 'da362497921c00001fc7fe3d')
+test(F64(math.pi * 1e300), 'da362497921c00001f1f013d')
+test(F64(math.pi * 1e-300), 'da362497921c00001fc7fe3d')
 
 test('', '40')
 test('Hello World', '48656c6c6f20576f726c64' .. '4b')
@@ -391,16 +402,28 @@ local function readfile(path)
   return data
 end
 
+local encode_fixtures = Tibs.decode(readfile '../fixtures/encode.tibs', 'fixtures/encode.tibs')
+print(dump(encode_fixtures))
+for section, tests in pairs(encode_fixtures) do
+  print('Section', section)
+  for i = 1, #tests, 2 do
+    local value = tests[i]
+    local expected = cdata_to_hex(tests[i + 1])
+    print(dump { section = section, i = i, value = value, expected = expected })
+    test(value, expected)
+  end
+end
+
 local samples = {
-  'sample1.json',
-  'sample2.json',
-  'sample3.json',
-  'sample4.json',
-  'sample5.json',
-  'sample6.json',
-  'sample7.json',
-  'sample8.json',
-  'sample9.json',
+  '../fixtures/sample1.json',
+  '../fixtures/sample2.json',
+  '../fixtures/sample3.json',
+  '../fixtures/sample4.json',
+  '../fixtures/sample5.json',
+  '../fixtures/sample6.json',
+  '../fixtures/sample7.json',
+  '../fixtures/sample8.json',
+  '../fixtures/sample9.json',
 }
 
 _G.pairs = original_pairs

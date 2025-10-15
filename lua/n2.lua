@@ -111,11 +111,17 @@ local function split_number(val)
   if val == 0 then
     return 0, 0
   end
+  if type(val) ~= 'number' then
+    error('Expected a number, got ' .. type(val))
+  end
   local str = tostring(val)
   -- Check if the number is in scientific notation
   if str:find 'e' then
     -- Split the string into base and exponent
     local base, exponent = str:match '(-?[%d%.]+)e([+-]?%d+)'
+    if not base or not exponent then
+      error('Invalid number format: ' .. str)
+    end
     exponent = tonumber(exponent)
     -- Check for decimal in base
     local decimal_pos = base:find('.', 1, true)
@@ -138,7 +144,6 @@ local function split_number(val)
   end
   -- Count trailing zeroes
   local zeroes_pos, _, zeroes = str:find '(0+)U?L?L?$'
-  print(dump{start=zeroes_pos,pos2=pos2})
   if zeroes_pos then
     local base = str:sub(1, zeroes_pos - 1)
     local exponent = #zeroes
@@ -353,17 +358,12 @@ local function encode(root_val, write, aggressive)
 
   local function encode_float(val)
     local base, power = split_number(val)
-    print(dump { val = val, base = base, power = power })
-    if power == 0 then
-      return encode_integer(val)
-    end
     write(encode_signed_pair(NUM, base))
     offset = write(encode_signed_pair(EXT, power))
   end
 
   local function encode_number(val)
-    print('encode number: ' .. dump(val))
-    if val == math.floor(tonumber(val)) and val >= -128 and val < 128 then
+    if val == math.floor(tonumber(val)) then
       encode_integer(val)
     else
       encode_float(val)
@@ -371,7 +371,7 @@ local function encode(root_val, write, aggressive)
   end
 
   local function encode_bigint(val)
-      return encode_number(val)
+    return encode_integer(val)
   end
 
   ---@param str string
@@ -472,7 +472,7 @@ local function encode(root_val, write, aggressive)
         end
       elseif typ == 'cdata' then
         if is_integer(val) then
-          encode_bigint(val)
+          encode_integer(val)
         elseif is_float(val) then
           encode_float(tonumber(val))
         else
