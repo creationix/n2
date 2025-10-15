@@ -290,8 +290,8 @@ export function encode(value: unknown): Uint8Array {
         for (let i = parts.length - 1; i >= 0; i--) {
           encodeAny(parts[i])
         }
-        writeUnsignedVarInt(STR, parts.length)
-        writeUnsignedVarInt(EXT, currentSize - start)
+        writeUnsignedVarInt(STR, currentSize - start)
+        writeUnsignedVarInt(EXT, parts.length)
         return
       }
     }

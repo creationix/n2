@@ -90,7 +90,7 @@ test("Encodes strings", () => {
   expect(
     toHex(encode("This is a longer string that exceeds 27 characters.")),
   ).toEqual(
-    "2e41546869732069732061206c6f6e67657220737472696e67207468617420657863656564732032372063686172616374657273325c42373c",
+    "2e41546869732069732061206c6f6e67657220737472696e67207468617420657863656564732032372063686172616374657273325c365c22",
   )
   expect(toHex(encode("😀"))).toEqual("f09f988044")
 });
@@ -225,13 +225,14 @@ test('Encodes string splitting correctly', () => {
   ]
   const encoded = encode(paths)
   expect(toHex(encoded)).toEqual(stripJoin(
+
     "  7c77696c6c2d626548", // "|will-be"
     "  2f77686572652d7468652d77696c642d7468696e677356", // "/where-the-wild-things"
     "  2f7365636f6e6447",   // "/second"
     "  2f6368617074657248", // "/chapter"
     "  2f666972737446",     // "/first"
     "  2f73656374696f6e48", // "/section"
-    "46 423c",              // STR(count 6) EXT(size 70)
+    "415c 26",              // STR(size 69) EXT(count 6)
 
     "  7c7765726545", // "|were"
     "  2adc",         // Pointer 42 back to previous "/where-the-wild-things"
@@ -239,7 +240,7 @@ test('Encodes string splitting correctly', () => {
     "  1ddc",         // Pointer 29 back to previous "/chapter"
     "  d8",           // Pointer 24 back to previous "/first"
     "  d0",           // Pointer 16 back to previous "/section"
-    "46 2f",          // STR(count 6) EXT(size 15)
+    "4e 26",          // STR(size 14) EXT(count 6)
 
     "  7c61726544", // "|are"
     "  39dc",       // Pointer 57 back to previous "/where-the-wild-things"
@@ -247,7 +248,7 @@ test('Encodes string splitting correctly', () => {
     "  2cdc",       // Pointer 44 back to previous "/chapter"
     "  27dc",       // Pointer 39 back to previous "/first"
     "  20dc",       // Pointer 32 back to previous "/section"
-    "46 30",        // STR(count 6) EXT(size 16)
+    "4f 26",        // STR(size 15) EXT(count 6)
 
     "659c" // ARR(size 101)
   ))
