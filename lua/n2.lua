@@ -279,6 +279,22 @@ local function varint_size(num)
   end
 end
 
+---@param num integer
+---@return integer
+local function signed_varint_size(num)
+  if num >= -14 and num < 14 then
+    return 1
+  elseif num >= -0x80 and num < 0x80 then
+    return 2
+  elseif num >= -0x8000 and num < 0x8000 then
+    return 3
+  elseif num >= -0x80000000 and num < 0x80000000 then
+    return 5
+  else
+    return 9
+  end
+end
+
 ---@param typ integer
 ---@param val integer
 ---@return N2_5|N2_8|N2_16|N2_32|N2_64 ptr
@@ -356,22 +372,31 @@ local function encode(root_val, write, aggressive)
     offset = write(encode_signed_pair(NUM, val))
   end
 
-  local function encode_float(val)
-    local base, power = split_number(val)
+  local function encode_float(val, base, power)
+    if not base or not power then
+      base, power = split_number(val)
+    end
     write(encode_signed_pair(NUM, base))
     offset = write(encode_signed_pair(EXT, power))
   end
 
+  -- Encode a number as either an integer or a float
+  -- Use whichever representation is more compact
+  ---@param val number
   local function encode_number(val)
-    if val == math.floor(tonumber(val)) then
-      encode_integer(val)
-    else
-      encode_float(val)
+    local base, power = split_number(val)
+    if power < 0 or val > 0x7FFFFFFFFFFFFFFF or val < -0x8000000000000000 then
+      -- If the number has a decimal component or is too bug, we have to encode it as a float
+      encode_float(val, base, power)
+      return
     end
-  end
-
-  local function encode_bigint(val)
-    return encode_integer(val)
+    local float_cost = signed_varint_size(base) + signed_varint_size(power)
+    local int_cost = signed_varint_size(val)
+    if float_cost < int_cost then
+      encode_float(val, base, power)
+    else
+      encode_integer(val)
+    end
   end
 
   ---@param str string
@@ -472,9 +497,15 @@ local function encode(root_val, write, aggressive)
         end
       elseif typ == 'cdata' then
         if is_integer(val) then
-          encode_integer(val)
+          -- If the integer fits in a Lua number, encode it as such
+          local num = tonumber(val)
+          if I64(num) == val then
+            encode_number(num)
+          else
+            encode_integer(val)
+          end
         elseif is_float(val) then
-          encode_float(tonumber(val))
+          encode_number(tonumber(val))
         else
           local info = ffi.typeinfo(ffi.typeof(val)).info
           local ct = arshift(info, 28)

@@ -1,8 +1,8 @@
 local N2 = require 'n2'
 local Tibs = require 'tibs'
 local dump = require 'dump'
-local ffi = require 'ffi'
 
+-- Polyfill for Lua 5.1
 function _G.pairs(self)
   local mt = getmetatable(self)
   if mt and mt.__pairs then
@@ -18,7 +18,7 @@ local function readfile(path)
   return Tibs.decode(data, path)
 end
 
-local fixtures = readfile 'fixtures/encode.tibs'
+local fixtures = readfile '../fixtures/encode.tibs'
 
 -- print(dump(fixtures))
 for section, tests in pairs(fixtures) do

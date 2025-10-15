@@ -402,18 +402,6 @@ local function readfile(path)
   return data
 end
 
-local encode_fixtures = Tibs.decode(readfile '../fixtures/encode.tibs', 'fixtures/encode.tibs')
-print(dump(encode_fixtures))
-for section, tests in pairs(encode_fixtures) do
-  print('Section', section)
-  for i = 1, #tests, 2 do
-    local value = tests[i]
-    local expected = cdata_to_hex(tests[i + 1])
-    print(dump { section = section, i = i, value = value, expected = expected })
-    test(value, expected)
-  end
-end
-
 local samples = {
   '../fixtures/sample1.json',
   '../fixtures/sample2.json',
