@@ -337,7 +337,6 @@ test("Decodes what it encodes", () => {
   for (const val of values) {
     const encoded = encode(val)
     const decoded = decode(encoded)
-    console.log({ val, encoded: toHex(encoded), decoded })
     expect(decoded).toEqual(val)
   }
 })
