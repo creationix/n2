@@ -435,7 +435,7 @@ export function decode(buffer: Uint8Array): unknown {
     const [extCount, type] = getTypes()
     if (extCount === 0) {
       if (type === NUM) {
-        return readSignedVarInt(NUM)
+        return numberMaybe(readSignedVarInt(NUM))
       } else if (type === STR) {
         return decodeStr(Number(readUnsignedVarInt(STR)))
       } else if (type === BIN) {
@@ -453,9 +453,9 @@ export function decode(buffer: Uint8Array): unknown {
       }
     } else if (extCount === 1) {
       if (type === NUM) {
-        const power = Number(readSignedVarInt(EXT))
-        const base = Number(readSignedVarInt(NUM))
-        return base * 10 ** power
+        const power = readSignedVarInt(EXT)
+        const base = readSignedVarInt(NUM)
+        return parseFloat(`${base}e${power}`)
       } else if (type === STR) {
         const count = Number(readUnsignedVarInt(EXT))
         const size = Number(readUnsignedVarInt(STR))
@@ -471,6 +471,16 @@ export function decode(buffer: Uint8Array): unknown {
     } else {
       throw new Error(`Unsupported EXT count: ${extCount}`)
     }
+  }
+
+  function numberMaybe(num: number | bigint): number | bigint {
+    if (typeof num === 'bigint') {
+      const n = Number(num)
+      if (Number.isSafeInteger(n) && BigInt(n) === num) {
+        return n
+      }
+    }
+    return num
   }
 
   function decodeStringChain(count: number, length: number): string {
@@ -538,19 +548,20 @@ export function decode(buffer: Uint8Array): unknown {
     return items
   }
 
-  function decodeMap(length: number): Record<string, unknown> {
+  function decodeMap(length: number): Record<string, unknown> | Map<unknown, unknown> {
     const last = offset - length
     if (last < 0) throw new Error("Unexpected end of buffer")
-    const map: Record<string, unknown> = {}
+    const entries: [unknown, unknown][] = []
+    let allStrings = true
     while (offset > last) {
       const key = decodeAny()
       if (typeof key !== "string") {
-        throw new Error(`Map key is not a string: ${key}`)
+        allStrings = false
       }
       const value = decodeAny()
-      map[key] = value
+      entries.push([key, value])
     }
-    return map
+    return allStrings ? Object.fromEntries(entries) : new Map(entries)
   }
 
   function decodePtr(delta: number): unknown {
@@ -661,10 +672,6 @@ export function decode(buffer: Uint8Array): unknown {
     // small === 31
     const value = view.getBigInt64(offset - 8, true)
     offset -= 8
-    const num = Number(value)
-    if (Number.isSafeInteger(num) && BigInt(num) === value) {
-      return num
-    }
     return value
   }
 }

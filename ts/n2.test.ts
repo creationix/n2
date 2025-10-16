@@ -256,7 +256,7 @@ test("Encodes the same as the fixtures file", async () => {
     await Bun.file("../fixtures/encode.tibs").text(),
     "../fixtures/encode.tibs",
   )
-  for (const [section, tests] of fixture.entries()) {
+  for (const [section, tests] of Object.entries(fixture)) {
     for (let i = 0, l = tests.length; i < l; i += 2) {
       const input = tests[i]
       const expected = toHex(tests[i + 1] as Uint8Array)
@@ -339,5 +339,26 @@ test("Decodes what it encodes", () => {
     const decoded = decode(encoded)
     console.log({ val, encoded: toHex(encoded), decoded })
     expect(decoded).toEqual(val)
+  }
+})
+
+test("Decodes the same as the fixtures file", async () => {
+  const fixture: Map<string, unknown[]> = parse(
+    await Bun.file("../fixtures/encode.tibs").text(),
+    "../fixtures/encode.tibs",
+  )
+  for (const [section, tests] of Object.entries(fixture)) {
+
+    for (let i = 0, l = tests.length; i < l; i += 2) {
+      const input = tests[i + 1] as Uint8Array
+      const expected = tests[i]
+      const actual = decode(input)
+      if (typeof expected === "bigint" && typeof actual === "number") {
+        if (BigInt(actual) === expected) {
+          continue
+        }
+      }
+      expect(actual).toEqual(expected)
+    }
   }
 })

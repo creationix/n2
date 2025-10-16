@@ -76,19 +76,23 @@ export function parse(input: string, filename = "[memory]"): any {
     }
   }
 
-  function parseMap(): any {
-    const map = new Map<any, any>()
+  function parseMap(): Record<string, unknown> | Map<unknown, unknown> {
+    const entries: [unknown, unknown][] = []
+    let allStrings = true
     index++ // Skip '{'
     skipWhitespaceAndComments()
     while (index < length && input[index] !== "}") {
       const key = parseValue()
+      if (typeof key !== "string") {
+        allStrings = false
+      }
       skipWhitespaceAndComments()
       if (input[index] !== ":") {
         throw new SyntaxError(`Expected ':' after key at position ${index}`)
       }
       index++ // Skip ':'
       const value = parseValue()
-      map.set(key, value)
+      entries.push([key, value])
       skipWhitespaceAndComments()
       if (input[index] === ",") {
         index++ // Skip ','
@@ -101,7 +105,7 @@ export function parse(input: string, filename = "[memory]"): any {
       throw new SyntaxError(`Expected '}' at position ${index}`)
     }
     index++ // Skip '}'
-    return map
+    return allStrings ? Object.fromEntries(entries) : new Map(entries)
   }
 
   function parseArray(): any[] {
@@ -211,8 +215,9 @@ export function parse(input: string, filename = "[memory]"): any {
     let num: bigint | number = Number(numStr)
     try {
       num = BigInt(numStr)
-      if (Number.MAX_SAFE_INTEGER >= num && num >= Number.MIN_SAFE_INTEGER) {
-        num = Number(num)
+      const n = Number(num)
+      if (Number.isSafeInteger(n) && BigInt(n) === num) {
+        return n
       }
     } catch {
       if (!Number.isFinite(num)) {
