@@ -299,8 +299,7 @@ test("Decodes what it encodes", () => {
     "a",
     "abc",
     "Hello, World!",
-    // TODO: Implement EXT STR
-    // "This is a longer string that exceeds 27 characters.",
+    "This is a longer string that exceeds 27 characters.",
     "😀",
     new Uint8Array([]),
     new Uint8Array([0]),
@@ -322,13 +321,12 @@ test("Decodes what it encodes", () => {
       const obj = { key: "value" }
       return [obj, obj, obj]
     })(),
-    // TODO: Implement EXT MAP
-    // [
-    //   { a: 1, b: 2 },
-    //   { a: 3, b: 4 },
-    //   { a: 5, b: 6 },
-    //   { a: 7, b: 8 },
-    // ],
+    [
+      { a: 1, b: 2 },
+      { a: 3, b: 4 },
+      { a: 5, b: 6 },
+      { a: 7, b: 8 },
+    ],
   ]
   for (const val of values) {
     const encoded = encode(val)

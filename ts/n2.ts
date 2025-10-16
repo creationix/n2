@@ -432,26 +432,84 @@ export function decode(buffer: Uint8Array): unknown {
   return decodeAny()
 
   function decodeAny(): unknown {
-    const type = getType()
-    if (type === NUM) {
-      return readSignedVarInt(NUM)
-    } else if (type === EXT) {
-      throw new Error("TODO: Implement extended types")
-    } else if (type === STR) {
-      return decodeStr(Number(readUnsignedVarInt(STR)))
-    } else if (type === BIN) {
-      return decodeBin(Number(readUnsignedVarInt(BIN)))
-    } else if (type === LST) {
-      return decodeList(Number(readUnsignedVarInt(LST)))
-    } else if (type === MAP) {
-      return decodeMap(Number(readUnsignedVarInt(MAP)))
-    } else if (type === PTR) {
-      return decodePtr(Number(readUnsignedVarInt(PTR)))
-    } else if (type === REF) {
-      return decodeRef(Number(readUnsignedVarInt(REF)))
+    const [extCount, type] = getTypes()
+    if (extCount === 0) {
+      if (type === NUM) {
+        return readSignedVarInt(NUM)
+      } else if (type === STR) {
+        return decodeStr(Number(readUnsignedVarInt(STR)))
+      } else if (type === BIN) {
+        return decodeBin(Number(readUnsignedVarInt(BIN)))
+      } else if (type === LST) {
+        return decodeList(Number(readUnsignedVarInt(LST)))
+      } else if (type === MAP) {
+        return decodeMap(Number(readUnsignedVarInt(MAP)))
+      } else if (type === PTR) {
+        return decodePtr(Number(readUnsignedVarInt(PTR)))
+      } else if (type === REF) {
+        return decodeRef(Number(readUnsignedVarInt(REF)))
+      } else {
+        throw new Error(`Unknown type: ${type}`)
+      }
+    } else if (extCount === 1) {
+      if (type === NUM) {
+        const power = readSignedVarInt(EXT)
+        const base = readSignedVarInt(NUM)
+        return decodeDecimal(base, power)
+      } else if (type === STR) {
+        const count = Number(readUnsignedVarInt(EXT))
+        const size = Number(readUnsignedVarInt(STR))
+        return decodeStringChain(count, size)
+      } else if (type === MAP) {
+        const delta = Number(readUnsignedVarInt(EXT))
+        const target = offset - delta
+        const length = Number(readUnsignedVarInt(MAP))
+        return decodeSchemaMap(length, target)
+      } else {
+        throw new Error(`Unknown type with 1 EXT: ${type}`)
+      }
     } else {
-      throw new Error(`Unknown type: ${type}`)
+      throw new Error(`Unsupported EXT count: ${extCount}`)
     }
+  }
+
+  function decodeStringChain(count: number, length: number): string {
+    const last = offset - length
+    if (last < 0) throw new Error("Unexpected end of buffer")
+    const items: unknown[] = []
+    while (offset > last) {
+      items.push(decodeAny())
+    }
+    if (items.length !== count) {
+      throw new Error(`String chain count mismatch: expected ${count} but got ${items.length}`)
+    }
+    return items.join("")
+  }
+
+  function decodeSchemaMap(length: number, target: number): Record<string, unknown> {
+    const savedOffset = offset
+    offset = target
+    const keys = decodeAny() as string[]
+    offset = savedOffset
+    const obj = {} as Record<string, unknown>
+    let count = 0
+    const last = offset - length
+    if (last < 0) throw new Error("Unexpected end of buffer")
+    while (offset > last) {
+      if (offset === target) {
+        // We want to ignore the schema keys if they are inline
+        const keysSize = Number(readUnsignedVarInt(LST))
+        offset -= keysSize
+        continue
+      }
+      const key = keys[count]
+      if (!key) {
+        throw new Error(`Schema key missing at index ${count}`)
+      }
+      count++
+      obj[key] = decodeAny()
+    }
+    return obj
   }
 
   function decodeStr(length: number): string {
@@ -511,10 +569,37 @@ export function decode(buffer: Uint8Array): unknown {
     throw new Error(`Unknown ref index: ${index}`)
   }
 
-  function getType(): N2Type {
+  // Return a count of EXT types followed by the base type
+  function getTypes(): [number, N2Type] {
+    let count = 0
+    const savedOffset = offset
+    while (true) {
+      const last = buffer[offset - 1]
+      if (last === undefined) throw new Error("Unexpected end of buffer")
+      const type = (last >> 5) as N2Type
+      if (type !== EXT) {
+        offset = savedOffset
+        return [count, type]
+      }
+      count++
+      skipVarInt()
+    }
+  }
+
+  function skipVarInt() {
     const last = buffer[offset - 1]
     if (last === undefined) throw new Error("Unexpected end of buffer")
-    return (last >> 5) as N2Type
+    const low = last & 0b11111
+    offset--
+    if (low === 28) {
+      offset--
+    } else if (low === 29) {
+      offset -= 2
+    } else if (low === 30) {
+      offset -= 4
+    } else if (low === 31) {
+      offset -= 8
+    }
   }
 
   function readUnsignedVarInt(type: N2Type): number | bigint {
