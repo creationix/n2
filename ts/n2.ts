@@ -453,9 +453,9 @@ export function decode(buffer: Uint8Array): unknown {
       }
     } else if (extCount === 1) {
       if (type === NUM) {
-        const power = readSignedVarInt(EXT)
-        const base = readSignedVarInt(NUM)
-        return decodeDecimal(base, power)
+        const power = Number(readSignedVarInt(EXT))
+        const base = Number(readSignedVarInt(NUM))
+        return base * 10 ** power
       } else if (type === STR) {
         const count = Number(readUnsignedVarInt(EXT))
         const size = Number(readUnsignedVarInt(STR))
