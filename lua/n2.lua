@@ -382,6 +382,7 @@ local function encode_signed_pair(typ, val)
   end
 end
 
+local key_cache = setmetatable({}, { __mode = 'k' })
 -- Create a unique key for a value
 -- Used for detecting previously seen values
 ---@param val any
@@ -391,6 +392,11 @@ local function makeKey(val, depth)
   depth = depth or 2
   if depth <= 0 or type(val) ~= 'table' then
     return type(val) == 'string' and string.format('%q', val) or tostring(val)
+  end
+  local key
+  local cached = key_cache[val]
+  if cached then
+    return cached
   end
   local is_array, iter = is_array_like(val)
   local parts = {}
@@ -404,9 +410,12 @@ local function makeKey(val, depth)
     end
   end
   if is_array then
-    return '[' .. table.concat(parts, ',') .. ']'
+    key = '[' .. table.concat(parts, ',') .. ']'
+  else
+    key = '{' .. table.concat(parts, ',') .. '}'
   end
-  return '{' .. table.concat(parts, ',') .. '}'
+  key_cache[val] = key
+  return key
 end
 
 ---@param root_val any
