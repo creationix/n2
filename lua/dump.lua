@@ -1,30 +1,68 @@
 local ffi = require 'ffi'
 local U8Arr = ffi.typeof 'uint8_t[?]'
 
+-- ANSI color codes
+local BLACK = '\27[90m'
+local RED = '\27[91m'
+local GREEN = '\27[92m'
+local YELLOW = '\27[93m'
+local BLUE = '\27[94m'
+local MAGENTA = '\27[95m'
+local CYAN = '\27[96m'
+local WHITE = '\27[97m'
+local BOLD = '\27[1m'
+local DIM = '\27[2m'
+local ITALIC = '\27[3m'
+local UNDERLINE = '\27[4m'
+local BLINK = '\27[5m'
+local INVERSE = '\27[6m'
+local REVERSE = '\27[7m'
+local RESET = '\27[0m'
+
+-- Some better colors using 256 ANSI codes
+local ORANGE = '\27[38;5;208m'
+local PINK = '\27[38;5;205m'
+local PURPLE = '\27[38;5;93m'
+local CORAL = '\27[38;5;203m'
+local COBALT = '\27[38;5;33m'
+local SKY = '\27[38;5;39m'
+local AQUA = '\27[38;5;51m'
+local STRAWBERRY = '\27[38;5;203m'
+local LIME = '\27[38;5;118m'
+local MINT = '\27[38;5;121m'
+local EMERALD = '\27[38;5;34m'
+local MUSTARD = '\27[38;5;136m'
+local GOLD = '\27[38;5;220m'
+local YELLOW_ORANGE = '\27[38;5;214m'
+
 local function color(val, str)
   local typ = type(val)
   local c
   if typ == 'string' then
-    c = '\27[0;32m'
+    c = LIME
   elseif typ == 'number' then
-    c = '\27[0;34m'
+    c = MINT
   elseif typ == 'boolean' then
-    c = '\27[0;35m'
+    c = PINK
   elseif typ == 'nil' then
-    c = '\27[0;36m'
+    c = DIM .. ITALIC .. WHITE
   elseif typ == 'table' then
-    c = '\27[0;33m'
+    c = MUSTARD
   elseif typ == 'function' then
-    c = '\27[0;37m'
+    c = GOLD
   elseif typ == 'userdata' then
-    c = '\27[0;38m'
+    c = CORAL
   elseif typ == 'thread' then
-    c = '\27[0;39m'
+    c = ORANGE
   elseif typ == 'cdata' then
-    c = '\27[0;31m'
+    if ffi.istype(U8Arr, val) then
+      c = SKY
+    else
+      c = STRAWBERRY
+    end
   end
   if c then
-    return c .. str .. '\27[0m'
+    return c .. str .. RESET
   end
   return str
 end
@@ -91,9 +129,12 @@ end
 
 local function dump_bytes(bin)
   local str = ffi.string(bin, ffi.sizeof(bin))
-  return string.format("<%s>", string.gsub(str, '.', function(c)
-    return string.format('%02x', c:byte(1))
-  end))
+  return string.format(
+    '<%s>',
+    string.gsub(str, '.', function(c)
+      return string.format('%02x', c:byte(1))
+    end)
+  )
 end
 
 -- A really simple dump that prints normal lua with lots of whitespace.
@@ -126,7 +167,7 @@ local function dump(val, indent)
   if output_count == 0 then
     return open .. close
   end
-  if size + output_count * 2 + 4 < 120 then
+  if size + output_count * 2 + 4 < 200 then
     return open .. ' ' .. table.concat(output, ', ') .. ' ' .. close
   end
   return open

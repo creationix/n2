@@ -105,6 +105,34 @@ local u16Ptr = ffi.typeof 'uint16_t*'
 local u32Ptr = ffi.typeof 'uint32_t*'
 local u64Ptr = ffi.typeof 'uint64_t*'
 
+-- Reverse an iterator
+---@generic O,T : fun():(any,any)
+---@param iter fun(O):T
+---@return T
+local function reverse(iter, obj)
+  ---@type any[]
+  local stack = {}
+  local height = 0
+  for k, v in iter(obj) do
+    height = height + 1
+    stack[height] = v
+    height = height + 1
+    stack[height] = k
+  end
+  return function()
+    local k = stack[height]
+    if not k then
+      return
+    end
+    stack[height] = nil
+    height = height - 1
+    local v = stack[height]
+    stack[height] = nil
+    height = height - 1
+    return k, v
+  end
+end
+
 -- Given a double value, split it into a base and power of 10.
 -- For example, 1234.5678 would be split into 12345678 and -4.
 local function split_number(val)
@@ -354,19 +382,72 @@ local function encode_signed_pair(typ, val)
   end
 end
 
+-- Create a unique key for a value
+-- Used for detecting previously seen values
+---@param val any
+---@param depth? integer
+---@return string
+local function makeKey(val, depth)
+  depth = depth or 2
+  if depth <= 0 or type(val) ~= 'table' then
+    return type(val) == 'string' and string.format('%q', val) or tostring(val)
+  end
+  local is_array, iter = is_array_like(val)
+  local parts = {}
+  local length = 0
+  for k, v in iter(val) do
+    length = length + 1
+    if is_array then
+      parts[length] = makeKey(v, depth - 1)
+    else
+      parts[length] = makeKey(k, depth - 1) .. ':' .. makeKey(v, depth - 1)
+    end
+  end
+  if is_array then
+    return '[' .. table.concat(parts, ',') .. ']'
+  end
+  return '{' .. table.concat(parts, ',') .. '}'
+end
+
 ---@param root_val any
 ---@param write fun(data:ffi.cdata*|string, len:integer):integer
----@param aggressive? boolean
 ---@return integer total_bytes_written
-local function encode(root_val, write, aggressive)
+local function encode(root_val, write)
   assert(type(write) == 'function', 'write function is required')
   local offset = 0
-  ---@type table<string|number,integer>
-  local seen_primitives = {}
-  ---@type table<table,integer>
-  local seen_tables = {}
-  ---@type table<any,integer>
+  ---@type table<string,integer>
+  local seen_offsets = {}
+  ---@type table<string,integer>
   local seen_costs = {}
+  ---@type table<string,integer>
+  local schema_counts = {}
+  ---@type table<table,string>
+  local schema_keys = setmetatable({}, { __mode = 'k' })
+
+  ---@param value unknown
+  local function count_schemas(value)
+    if type(value) ~= 'table' then
+      return
+    end
+    local is_array, iter = is_array_like(value)
+    local keys = is_array and nil or {}
+    local count = 0
+    for k, v in iter(value) do
+      count_schemas(k)
+      count_schemas(v)
+      if not is_array then
+        count = count + 1
+        keys[count] = tostring(k)
+      end
+    end
+    if count > 1 then
+      local key = makeKey(keys)
+      schema_keys[value] = key
+      schema_counts[key] = (schema_counts[key] or 0) + 1
+    end
+  end
+
+  count_schemas(root_val)
 
   local function encode_integer(val)
     offset = write(encode_signed_pair(NUM, val))
@@ -411,56 +492,61 @@ local function encode(root_val, write, aggressive)
   local encode_any
 
   local function encode_list(lst, iter)
-    local stack = {}
-    local height = 0
-    for i, v in iter(lst) do
-      height = i
-      stack[height] = v
-    end
     local start = offset
-    for i = height, 1, -1 do
-      encode_any(stack[i])
+    for _, v in reverse(iter, lst) do
+      encode_any(v)
     end
     offset = write(encode_pair(LST, offset - start))
   end
 
+  local function encode_schema_map(map, iter)
+    local start = offset
+    local keys = {}
+    local count = 0
+    for k in iter(map) do
+      count = count + 1
+      keys[count] = k
+    end
+    for i = count, 1, -1 do
+      local k = keys[i]
+      local v = map[k]
+      encode_any(v)
+    end
+    local target = encode_any(keys, true)
+    target = target or offset
+    offset = write(encode_pair(MAP, offset - start))
+    offset = write(encode_pair(EXT, offset - target))
+  end
+
   local function encode_map(map, iter)
-    local stack = {}
-    local height = 0
-    for k, v in iter(map) do
-      height = height + 2
-      stack[height - 1] = k
-      stack[height] = v
+    local schema_key = schema_keys[map]
+    if schema_key and schema_counts[schema_key] > 1 then
+      return encode_schema_map(map, iter)
     end
     local start = offset
-    for i = height, 1, -1 do
-      encode_any(stack[i])
+    for k, v in reverse(iter, map) do
+      encode_any(v)
+      encode_any(k)
     end
     offset = write(encode_pair(MAP, offset - start))
   end
 
   ---@param val any
-  function encode_any(val)
-    local seen_offset = seen_primitives[val]
-    local seen_cost
-    if seen_offset then
-      seen_cost = seen_costs[val]
-    elseif aggressive and type(val) == 'table' then
-      for seen_table in next, seen_tables do
-        if same_shape(val, seen_table) then
-          seen_offset = seen_tables[seen_table]
-          seen_cost = seen_costs[seen_table]
-          break
-        end
-      end
-    end
+  ---@param skipPointer? boolean
+  ---@return integer|nil seen_offset
+  function encode_any(val, skipPointer)
+    local key = makeKey(val)
+    local seen_offset = seen_offsets[key]
     if seen_offset then
       local delta = offset - seen_offset
-      if seen_cost > varint_size(delta) + 1 then
-        offset = write(encode_pair(PTR, delta))
-        return
+      if seen_costs[key] > varint_size(delta) + 1 then
+        if not skipPointer then
+          offset = write(encode_pair(PTR, delta))
+        end
+        return seen_offset
       end
     end
+    local before = offset
     if val == nil then
       offset = write(encode_pair(REF, NULL))
     elseif val == true then
@@ -470,30 +556,15 @@ local function encode(root_val, write, aggressive)
     else
       local typ = type(val)
       if typ == 'string' then
-        local before = offset
         encode_string(val)
-        if offset - before > 2 then
-          seen_primitives[val] = offset
-          seen_costs[val] = offset - before
-        end
       elseif typ == 'number' then
-        local before = offset
         encode_number(val)
-        if offset - before > 2 then
-          seen_costs[val] = offset - before
-          seen_primitives[val] = offset
-        end
       elseif typ == 'table' then
         local is_array, iter = is_array_like(val)
-        local before = offset
         if is_array then
           encode_list(val, iter)
         else
           encode_map(val, iter)
-        end
-        if aggressive then
-          seen_tables[val] = offset
-          seen_costs[val] = offset - before
         end
       elseif typ == 'cdata' then
         if is_integer(val) then
@@ -522,6 +593,11 @@ local function encode(root_val, write, aggressive)
       else
         error('Unsupported type: ' .. typ)
       end
+    end
+    local cost = offset - before
+    if cost > 1 then
+      seen_offsets[key] = offset
+      seen_costs[key] = cost
     end
   end
 
@@ -555,19 +631,17 @@ local function buffered_write(data, len)
 end
 
 ---@param root_val any
----@param agressive? boolean
-local function encode_to_string(root_val, agressive)
+local function encode_to_string(root_val)
   assert(size == 0)
-  local total_bytes_written = encode(root_val, buffered_write, agressive)
+  local total_bytes_written = encode(root_val, buffered_write)
   size = 0
   return ffi_string(buf, total_bytes_written)
 end
 
 ---@param root_val any
----@param agressive? boolean
-local function encode_to_bytes(root_val, agressive)
+local function encode_to_bytes(root_val)
   assert(size == 0)
-  local total_bytes_written = encode(root_val, buffered_write, agressive)
+  local total_bytes_written = encode(root_val, buffered_write)
   size = 0
   local new_buf = U8Arr(total_bytes_written)
   ffi.copy(new_buf, buf, total_bytes_written)
@@ -579,4 +653,6 @@ return {
   encode = encode,
   encode_to_string = encode_to_string,
   encode_to_bytes = encode_to_bytes,
+  is_float = is_float,
+  is_integer = is_integer,
 }
