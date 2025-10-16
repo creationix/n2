@@ -268,3 +268,72 @@ test("Encodes the same as the fixtures file", async () => {
     }
   }
 });
+
+test("Decodes what it encodes", () => {
+  const values: unknown[] = [
+    null,
+    true,
+    false,
+    0,
+    -1,
+    1,
+    -13,
+    13,
+    100,
+    -100,
+    256,
+    -256,
+    1001,
+    -1001,
+    65536,
+    -65536,
+    16777216,
+    -16777216,
+    4294967296,
+    -4294967296,
+    0xdeadbeef,
+    -0xdeadbeef,
+    0x123456789abcdefn,
+    -0x123456789abcdefn,
+    "",
+    "a",
+    "abc",
+    "Hello, World!",
+    // TODO: Implement EXT STR
+    // "This is a longer string that exceeds 27 characters.",
+    "😀",
+    new Uint8Array([]),
+    new Uint8Array([0]),
+    new Uint8Array([1, 2, 3, 4, 5]),
+    new Uint8Array([...Array(30).keys()]),
+    [],
+    [1, 2, 3],
+    [null, true, false],
+    [1, [2, [3]]],
+    new Array(30).fill(0).map((_, i) => i),
+    {},
+    { a: 1, b: 2 },
+    { foo: "bar", baz: [1, 2, 3] },
+    { nested: { a: { b: { c: 3 } } } },
+    { a: 1, b: { c: 2, d: [3, 4] }, e: "five" },
+    ["repeat", "repeat", "repeat"],
+    { a: "same", b: "same", c: "same" },
+    (() => {
+      const obj = { key: "value" }
+      return [obj, obj, obj]
+    })(),
+    // TODO: Implement EXT MAP
+    // [
+    //   { a: 1, b: 2 },
+    //   { a: 3, b: 4 },
+    //   { a: 5, b: 6 },
+    //   { a: 7, b: 8 },
+    // ],
+  ]
+  for (const val of values) {
+    const encoded = encode(val)
+    const decoded = decode(encoded)
+    console.log({ val, encoded: toHex(encoded), decoded })
+    expect(decoded).toEqual(val)
+  }
+})

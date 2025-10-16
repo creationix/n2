@@ -1,13 +1,14 @@
 import { makeKey } from './structural-key.ts'
 
-const NUM = 0 // 000
-const EXT = 1 // 001
-const STR = 2 // 010
-const BIN = 3 // 011
-const LST = 4 // 100
-const MAP = 5 // 101
-const PTR = 6 // 110
-const REF = 7 // 111
+type N2Type = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+const NUM: N2Type = 0 // 000
+const EXT: N2Type = 1 // 001
+const STR: N2Type = 2 // 010
+const BIN: N2Type = 3 // 011
+const LST: N2Type = 4 // 100
+const MAP: N2Type = 5 // 101
+const PTR: N2Type = 6 // 110
+const REF: N2Type = 7 // 111
 
 // Encode arbitrary JSON serializable values into a compact binary format
 // The format is written in reverse order with leaves and data first
@@ -426,5 +427,159 @@ export function splitNumber(val: number): [number, number] {
 }
 
 export function decode(buffer: Uint8Array): unknown {
+  let offset = buffer.length
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+  return decodeAny()
 
+  function decodeAny(): unknown {
+    const type = getType()
+    if (type === NUM) {
+      return readSignedVarInt(NUM)
+    } else if (type === EXT) {
+      throw new Error("TODO: Implement extended types")
+    } else if (type === STR) {
+      return decodeStr(Number(readUnsignedVarInt(STR)))
+    } else if (type === BIN) {
+      return decodeBin(Number(readUnsignedVarInt(BIN)))
+    } else if (type === LST) {
+      return decodeList(Number(readUnsignedVarInt(LST)))
+    } else if (type === MAP) {
+      return decodeMap(Number(readUnsignedVarInt(MAP)))
+    } else if (type === PTR) {
+      return decodePtr(Number(readUnsignedVarInt(PTR)))
+    } else if (type === REF) {
+      return decodeRef(Number(readUnsignedVarInt(REF)))
+    } else {
+      throw new Error(`Unknown type: ${type}`)
+    }
+  }
+
+  function decodeStr(length: number): string {
+    const start = offset - length
+    if (start < 0) throw new Error("Unexpected end of buffer")
+    const str = new TextDecoder().decode(buffer.subarray(start, offset))
+    offset -= length
+    return str
+  }
+
+  function decodeBin(length: number): Uint8Array {
+    const start = offset - length
+    if (start < 0) throw new Error("Unexpected end of buffer")
+    const bin = buffer.subarray(start, offset)
+    offset -= length
+    return bin
+  }
+
+  function decodeList(length: number): unknown[] {
+    const last = offset - length
+    if (last < 0) throw new Error("Unexpected end of buffer")
+    const items: unknown[] = []
+    while (offset > last) {
+      items.push(decodeAny())
+    }
+    return items
+  }
+
+  function decodeMap(length: number): Record<string, unknown> {
+    const last = offset - length
+    if (last < 0) throw new Error("Unexpected end of buffer")
+    const map: Record<string, unknown> = {}
+    while (offset > last) {
+      const key = decodeAny()
+      if (typeof key !== "string") {
+        throw new Error(`Map key is not a string: ${key}`)
+      }
+      const value = decodeAny()
+      map[key] = value
+    }
+    return map
+  }
+
+  function decodePtr(delta: number): unknown {
+    const savedOffset = offset
+    offset = offset - delta
+    const value = decodeAny()
+    offset = savedOffset
+    return value
+  }
+
+
+  function decodeRef(index: number): unknown {
+    if (index === 0) return null
+    if (index === 1) return true
+    if (index === 2) return false
+    throw new Error(`Unknown ref index: ${index}`)
+  }
+
+  function getType(): N2Type {
+    const last = buffer[offset - 1]
+    if (last === undefined) throw new Error("Unexpected end of buffer")
+    return (last >> 5) as N2Type
+  }
+
+  function readUnsignedVarInt(type: N2Type): number | bigint {
+    const last = buffer[offset - 1]
+    if (last === undefined) throw new Error("Unexpected end of buffer")
+    const high = last >> 5
+    if (high !== type) {
+      throw new Error(`Expected type ${type} but got ${high}`)
+    }
+    offset--
+    const low = last & 0b11111
+    if (low < 28) {
+      return low
+    } else if (low === 28) {
+      const value = view.getUint8(offset - 1)
+      offset--
+      return value
+    } else if (low === 29) {
+      const value = view.getUint16(offset - 2, true)
+      offset -= 2
+      return value
+    } else if (low === 30) {
+      const value = view.getUint32(offset - 4, true)
+      offset -= 4
+      return value
+    }
+    // small === 31
+    const value = view.getBigUint64(offset - 8, true)
+    offset -= 8
+    return value
+  }
+
+  function readSignedVarInt(type: N2Type): number | bigint {
+    const first = buffer[offset - 1]
+    if (first === undefined) throw new Error("Unexpected end of buffer")
+    offset--
+    const high = first >> 5
+    if (high !== type) {
+      throw new Error(`Expected type ${type} but got ${high}`)
+    }
+    const low = first & 0b11111
+    if (low < 28) {
+      // zigzag decode small values in single byte
+      const value = (low >> 1) ^ -(low & 1)
+      return value
+    } else if (low === 28) {
+      const value = view.getInt8(offset - 1)
+      offset--
+      return value
+    } else if (low === 29) {
+      const value = view.getInt16(offset - 2, true)
+      offset -= 2
+      return value
+    } else if (low === 30) {
+      const value = view.getInt32(offset - 4, true)
+      offset -= 4
+      return value
+    }
+    // small === 31
+    const value = view.getBigInt64(offset - 8, true)
+    offset -= 8
+    const num = Number(value)
+    if (Number.isSafeInteger(num) && BigInt(num) === value) {
+      return num
+    }
+    return value
+  }
 }
