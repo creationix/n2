@@ -105,10 +105,10 @@ local function cdata_to_hex(data)
   return string.format('%s', table.concat(bytes, ''))
 end
 
-local function test(value, expected, ...)
+local function test(value, expected)
   print()
   print(dump(value))
-  local data = N2.encode_to_string(value, ...)
+  local data = N2.encode_to_string(value)
   print(to_binary(data))
   local actual = to_hex(data)
   if actual ~= expected then
@@ -329,62 +329,15 @@ end
 test(
   repeats,
   '686942' -- "hi"
-    .. 'c0c1c2'
-    .. '86' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. 'c4c5c6c7' -- 3 pointers to "hi"
-    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. 'c9cacbcc' -- 4 pointers to "hi"
-    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. 'cecfd0d1' -- 4 pointers to "hi"
-    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. 'd3d4d5d6' -- 4 pointers to "hi"
-    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. 'd8d9dadb' -- 4 pointers to "hi"
-    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. '68694' -- "hi"
-    .. '2c0c1c2' -- 3 pointers to "hi"
-    .. '86' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. 'c4c5c6c7' -- 4 pointers to "hi"
-    .. '84' -- { 'hi', 'hi', 'hi', 'hi' }
-    .. '2c9c' -- outer list header
-)
-test(
-  repeats,
-  '686942' -- "hi"
     .. 'c0c1c2' -- pointers to "hi"
     .. '86' -- { "hi", "hi", "hi", "hi" }
     .. 'c0c1c2c3c4c5c6' -- pointers to { "hi", "hi", "hi", "hi" }
-    .. '8e', -- outer list header
-  true
+    .. '8e' -- outer list header
 )
 
 for i = 1, 8 do
   repeats[i] = { 'hi', 'bye', 'hi', 'bye' }
 end
-test(
-  repeats,
-  '62796543' -- "bye"
-    .. '686942' -- "hi"
-    .. 'c3c1' -- pointers to "hi" and "bye"
-    .. '89' -- { "hi", "bye", "hi", "bye" }
-    .. 'c6c4c8c6' -- pointers to "hi" and "bye"
-    .. '84' -- { "hi", "bye", "hi", "bye" }
-    .. 'cbc9cdcb' -- pointers to "hi" and "bye"
-    .. '84' -- { "hi", "bye", "hi", "bye" }
-    .. 'd0ced2d0' -- pointers to "hi" and "bye"
-    .. '84' -- { "hi", "bye", "hi", "bye" }
-    .. 'd5d3d7d5' -- pointers to "hi" and "bye"
-    .. '84' -- { "hi", "bye", "hi", "bye" }
-    .. 'dad81cdcdb' -- more pointers (notice one is two bytes)
-    .. '85' -- { "hi", "bye", "hi", "bye" }
-    .. '20dc' -- pointer to "bye"
-    .. '686942' -- "hi"
-    .. '25dcc2' -- pointers to "hi" and "bye"
-    .. '88' -- { "hi", "bye", "hi", "bye" }
-    .. '29dcc62cdcc9' -- more pointers
-    .. '86' -- { "hi", "bye", "hi", "bye" }
-    .. '349c' -- outer list header
-)
 
 test(
   repeats,
@@ -393,8 +346,7 @@ test(
     .. 'c3c1' -- pointers to 'hi' and 'bye'
     .. '89' -- { 'hi', 'bye', 'hi', 'bye' }
     .. 'c0c1c2c3c4c5c6' -- pointers to { 'hi', 'bye', 'hi', 'bye' }
-    .. '91', -- outer list header
-  true
+    .. '91' -- outer list header
 )
 
 zone()
