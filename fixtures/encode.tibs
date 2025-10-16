@@ -96,9 +96,9 @@
 
   "strings": [
               "", <40>,
-         "Hello", <48656c6c6f45>,
-         "World", <576f726c6445>,
-      "🏵ROSETTE", <f09f8fb5524f53455454454b>,
+         "Hello", <48656c6c6f 45>,
+         "World", <576f726c64 45>,
+      "🏵ROSETTE", <f09f8fb5524f5345545445 4b>,
     "🟥🟧🟨🟩🟦🟪", <
       f09f9fa5 // 🟥
       f09f9fa7 // 🟧
@@ -108,7 +108,7 @@
       f09f9faa // 🟪
       58       // STR(24)
     >,
-          "👶WH", <f09f91b6574846>,
+    "👶WH", <f09f91b65748 46>,
   ],
 
   "list": [
@@ -123,6 +123,35 @@
   ],
 
   "pointers": [
+    [
+      { "a": 1, "b": 2 },
+      { "a": 3, "b": 4 },
+      { "a": 5, "b": 6 },
+      { "a": 7, "b": 8 },
+    ],
+    <
+      10     // 8
+      0e     // 7
+        6241 // "b"
+        6141 // "a"
+      84     // schema array with 4 bytes
+    a7 21    // {...} with schema pointer back 1 byte
+
+      0c  // 6
+      0a  // 5
+    a2 25 // {...} with schema pointer back 5 bytes
+
+      08  // 4
+      06  // 3
+    a2 29 // {...} with schema pointer back 9 bytes
+
+      04  // 2
+      02  // 1
+    a2 2d // {...} with schema pointer back 13 bytes
+
+    95  // array with 21 bytes
+    >,
+
     [
       {"color":"red","fruits":["apple","strawberry"]},
       {"color":"green","fruits":["apple"]},
