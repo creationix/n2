@@ -269,7 +269,7 @@ test("Encodes the same as the fixtures file", async () => {
   }
 });
 
-test.only("Passed the decode fixtures", async () => {
+test("Passed the decode fixtures", async () => {
   const fixture: Map<string, unknown[]> = parse(
     await Bun.file("../fixtures/decode.tibs").text(),
     "../fixtures/decode.tibs",
@@ -278,7 +278,7 @@ test.only("Passed the decode fixtures", async () => {
 
     for (let i = 0, l = tests.length; i < l; i += 2) {
       const input = tests[i] as Uint8Array
-      console.log({ section, input: toHex(input) })
+      // console.log({ section, input: toHex(input) })
       const expected = tests[i + 1]
       const actual = decode(input)
       expect(actual).toEqual(expected)
