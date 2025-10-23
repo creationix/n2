@@ -269,6 +269,31 @@ test("Encodes the same as the fixtures file", async () => {
   }
 });
 
+test.only("Passed the decode fixtures", async () => {
+  const fixture: Map<string, unknown[]> = parse(
+    await Bun.file("../fixtures/decode.tibs").text(),
+    "../fixtures/decode.tibs",
+  )
+  for (const [section, tests] of Object.entries(fixture)) {
+
+    for (let i = 0, l = tests.length; i < l; i += 2) {
+      const input = tests[i] as Uint8Array
+      console.log({ section, input: toHex(input) })
+      const expected = tests[i + 1]
+      const actual = decode(input)
+      if (actual !== expected) {
+        if (ArrayBuffer.isView(actual) && ArrayBuffer.isView(expected)) {
+          if (toHex(actual as Uint8Array) === toHex(expected as Uint8Array)) {
+            continue
+          }
+        }
+        console.error({ section, input, expected, actual__: actual })
+        throw new Error(`Mismatch in ${section}[${i / 2}]`)
+      }
+    }
+  }
+})
+
 test("Decodes what it encodes", () => {
   const values: unknown[] = [
     null,
