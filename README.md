@@ -87,7 +87,22 @@ REF(2) → false
 REF(3+) → user-defined dictionary entries
 ```
 
----
+### Value Types
+
+Various values are encoded using the 7 core types combind with zero or more `EXT` tags.
+
+| Name   | Encoding         | Interpretation                         |
+|--------|------------------|----------------------------------------|
+| Integer| NUM(val: signed) | `val` is the integer itself (i64 range)|
+
+- **UTF-8 String**: `STR(len: unsigned)` - `len`is the length of the string in utf-8 bytes.
+- **Bytes**: `BIN(len: unsigned)` - `len` is the length of the binary value in bytes.
+- `LST(len: unsigned)` - `len` is the total length of all values in bytes.
+- `MAP(len: unsigned)` - `len` is the total length of all keys and values in bytes.
+- `PTR(offset: unsigned)` -  `offset` is the relative byte offset from the end if this value to the start of the target value.
+- `REF(index: unsigned)` - `index` is the index into a table of know values.  The first 3 are hard-coded to be `nil`, `true`, and `false`.  More are user provided.
+- `EXT(pow: signed) NUM(val: signed)` - `val` is the base value, `pow` is a power of 10.: `num = val * 10 ** pow`
+- `EXT(count: unsigned) STR(len: unsigned)` - `len` is the total length of all entries in the string chain.  `count` is redundant information that counts the number of string segments.
 
 ## Type Encoding Examples
 
