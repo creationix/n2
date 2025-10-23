@@ -91,20 +91,25 @@ REF(3+) → user-defined dictionary entries
 
 Various values are encoded using the 7 core types combind with zero or more `EXT` tags.
 
-| Name         | Encoding                         | Interpretation                               |
-|--------------|----------------------------------|----------------------------------------------|
-| Integer      | `NUM(val:i64)`                   | `val` is the integer itself.                 |
-| Decimal      | `EXT(pow:i64)`<br>`NUM(val:i64)` | `pow` is a power of 10.<br>`val` is the base value. |
-| Pointer      | `PTR(off:u64)`                   | `off` is the relative byte offset between the `PTR` and target. |
-| Reference    | `REF(idx:u64)`                   | `idx` is the index into a table of known values. |
-| Bytes        | `BIN(len:u64)`<br>`BYTES`        | `len` is the number of bytes.<br>`BYTES` is the value itself. |
-| String       | `STR(len:u64)`<br>`BYTES`        | `len` is the number of bytes.<br>`BYTES` is the string as utf-8. |
-| String Chain | `EXT(cnt:u64)`<br>`STR(len:u64)`<br>`VALUE*` | `cnt` is the _(redundant)_ count of string segments. <br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more strings, pointers, or recursive chains. |
-| List         | `LST(len:u64)`<br>`VALUE*`       | `len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive values. |
-| Array        | `EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`VALUE*` | `wid` is index pointer width.<br>`cnt` is count of index entries<br>`len` is the number of bytes of all children.<br>`INDEX` is an array of fixed width offset pointers _(from end of index)_<br>`VALUE*` is zero or more recursive values. |
-| Map          | `MAP(len:u64)`<br>`(KEY VALUE)*` | `len` is the number of bytes of all children<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
-| Schema Map   | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`SCHEMA?`<br>`VALUE*` | `off` is the relative offset between the `EXT` and the shared schema<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List or Array of key values set on first use.<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
-| Binary Map   | `EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | `wid` is index pointer width.<br>`cnt` is count of index entries<br>`len` is the number of bytes of all children.<br>`INDEX` is an array of fixed width offset pointers _(from end of index)_<br>`(KEY VALUE)*` is zero or more sorted recursive key-value pairs. |
+| Name          | Encoding                         | Interpretation                               |
+|---------------|----------------------------------|----------------------------------------------|
+| Integer       | `NUM(val:i64)`                   | `val` is the integer itself.                 |
+| Decimal       | `EXT(pow:i64)`<br>`NUM(val:i64)` | `pow` is a power of 10.<br>`val` is the base value. |
+| Pointer       | `PTR(off:u64)`                   | `off` is the relative byte offset between the `PTR` and target. |
+| Reference     | `REF(idx:u64)`                   | `idx` is the index into a table of known values. |
+| Bytes         | `BIN(len:u64)`<br>`BYTES`        | `len` is the number of bytes.<br>`BYTES` is the value itself. |
+| Append Bytes  | `EXT(off:u64)`<br>`BIN(len:u64)`<br>`VALUE*` | `off` is optional pointer to a bianry prefix.<br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive binary values. |
+| String        | `STR(len:u64)`<br>`BYTES`        | `len` is the number of bytes.<br>`BYTES` is the string as utf-8. |
+| Append String | `EXT(off:u64)`<br>`STR(len:u64)`<br>`VALUE*` | `off` is optional pointer to a string prefix.<br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive string values. |
+| List          | `LST(len:u64)`<br>`VALUE*`       | `len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive values. |
+| Append List   | `EXT(off:u64)`<br>`LST(len:u64)`<br>`VALUE*` | `off` is optional pointer to a list prefix.<br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive values. |
+| Indexed List  | `EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`VALUE*` | `wid` is index pointer width.<br>`cnt` is count of index entries<br>`len` is the number of bytes of all children.<br>`INDEX` is an array of fixed width offset pointers _(from end of index)_<br>`VALUE*` is zero or more recursive values. |
+| Append Indexed List | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`VALUE*` | Combined capabilities of Append List and Indexed list |
+| Map           | `MAP(len:u64)`<br>`(KEY VALUE)*` | `len` is the number of bytes of all children<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
+| Append Map    | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`(KEY VALUE)*` | `off` is optional pointer to a map prefix.<br>`len` is the number of bytes of all children.<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
+| Indexed Map   | `EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | `wid` is index pointer width.<br>`cnt` is count of index entries<br>`len` is the number of bytes of all children.<br>`INDEX` is an array of fixed width offset pointers _(from end of index)_<br>`(KEY VALUE)*` is zero or more sorted recursive key-value pairs. |
+| Append Indexed Map | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | Combined capabilities of Append Map and Indexed Map |
+| Schema Map    | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`SCHEMA?`<br>`VALUE*` | `off` is the relative offset between the `EXT` and the shared schema list.<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List of key values set on first use.<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
 
 ## Type Encoding Examples
 
