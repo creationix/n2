@@ -281,15 +281,7 @@ test.only("Passed the decode fixtures", async () => {
       console.log({ section, input: toHex(input) })
       const expected = tests[i + 1]
       const actual = decode(input)
-      if (actual !== expected) {
-        if (ArrayBuffer.isView(actual) && ArrayBuffer.isView(expected)) {
-          if (toHex(actual as Uint8Array) === toHex(expected as Uint8Array)) {
-            continue
-          }
-        }
-        console.error({ section, input, expected, actual__: actual })
-        throw new Error(`Mismatch in ${section}[${i / 2}]`)
-      }
+      expect(actual).toEqual(expected)
     }
   }
 })
