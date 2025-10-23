@@ -496,12 +496,13 @@ export function decode(buffer: Uint8Array): unknown {
     return items.join("")
   }
 
-  function decodeSchemaMap(length: number, target: number): Record<string, unknown> {
+  function decodeSchemaMap(length: number, target: number): Record<string, unknown> | Map<unknown, unknown> {
     const savedOffset = offset
     offset = target
     const keys = decodeAny() as string[]
     offset = savedOffset
-    const obj = {} as Record<string, unknown>
+    const entries: [string, unknown][] = []
+    let stringsOnly = true
     let count = 0
     const last = offset - length
     if (last < 0) throw new Error("Unexpected end of buffer")
@@ -517,9 +518,12 @@ export function decode(buffer: Uint8Array): unknown {
         throw new Error(`Schema key missing at index ${count}`)
       }
       count++
-      obj[key] = decodeAny()
+      if (typeof key !== "string") {
+        stringsOnly = false
+      }
+      entries.push([key, decodeAny()])
     }
-    return obj
+    return stringsOnly ? Object.fromEntries(entries) : new Map(entries)
   }
 
   function decodeStr(length: number): string {
