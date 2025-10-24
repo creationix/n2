@@ -64,6 +64,7 @@ const REF: N2Type = 7 // 111
 //   0 - null
 //   1 - true
 //   2 - false
+//   3 - delete
 
 export function encode(value: unknown): Uint8Array {
   const parts: Uint8Array[] = []

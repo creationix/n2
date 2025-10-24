@@ -90,7 +90,7 @@ REF(4+) → user-defined dictionary entries
 
 ### Value Types
 
-Various values are encoded using the 7 core types combind with zero or more `EXT` tags.
+Various values are encoded using the 7 core types combined with zero or more `EXT` tags.
 
 | Name          | Encoding                         | Interpretation                               |
 |---------------|----------------------------------|----------------------------------------------|
@@ -111,6 +111,65 @@ Various values are encoded using the 7 core types combind with zero or more `EXT
 | Indexed Map   | `EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | `wid` is index pointer width.<br>`cnt` is count of index entries<br>`len` is the number of bytes of all children.<br>`INDEX` is an array of fixed width offset pointers _(from end of index)_<br>`(KEY VALUE)*` is zero or more sorted recursive key-value pairs. |
 | Append Indexed Map | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | Combined capabilities of Append Map and Indexed Map |
 | Schema Map    | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`SCHEMA?`<br>`VALUE*` | `off` is the relative offset between the `EXT` and the shared schema list.<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List of key values set on first use.<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
+
+## Assembly Syntax
+
+Sometimes a textual representation is useful for understanding how a document is optimized/structured.
+
+- String uses JSON syntax
+  - For example `"Hello"`
+- Bytes use `<` + hex + `>` and allow whitespace and comments between bytes.
+  - For example `<deadbeef>`
+- Unsigned Integers use normal decimal syntax with `/` in front.
+  - For example `/123`.  But also `/NIL`, `/TRUE`, `/FALSE`, and `/DELETE` can be used
+- Signed Integers use normal decimal syntax with an explicit `+` or `-`
+  - For example `+123` or `-3`
+- Pointers use `*`+name syntax and point to locations using name+`:` labels outside the target.
+  - For example `(PTR*a) ... a:(NUM+42)`
+- When a tag contains a length, no value is written, but the body they contain is inside the parentheses.
+  - For example `(STR "Hello")`
+- When `EXT` contains zero, it's just written `EXT`.
+- The distinction between the 5 varint representations is abstracted away at this level.
+- An array index is written as `###`
+- The width param is written as `EXT/w`
+- The count param is written as `EXT/c`
+- When showing that arbitrary data might exist, `...` is used.
+
+```lua
+-- Encoding the integer 42 looks like this:
+(NUM+42)
+-- Encoding the decimal value 3.14 (314e-2) looks like this:
+(EXT-2 NUM+314)
+-- Encoding [1, 2, 3] looks like:
+(LST (NUM+1) (NUM+2) (NUM+3))
+-- Encoding "Hello World" as a single string looks like:
+(STR "Hello World")
+-- Encoding it as a two segment string chain looks like:
+(EXT STR (STR "Hello") (STR " World"))
+-- Encoding the two segments using an append pointer looks like:
+(EXT*w STR (STR " World")) ... w:(STR "Hello")
+-- Encoding {name:"N2"} looks like:
+(MAP (STR "name") (STR "N2"))
+-- But if it has an external schema it looks like:
+(EXT*s MAP (STR "N2")) ... s:(LST (STR "name"))
+-- Or if the shared schema is inside, it looks like:
+(EXT*s MAP s:(LST (STR "name")) (STR "N2"))
+-- An append list that decodes to [2,false,1,true] might look like:
+(EXT*p LST (NUM+1) (REF/1)) ... p:(LST (NUM+2) (REF/2))
+-- An indexed map for {a:1,b:2,c:3} might look like:
+(EXT/w EXT/c MAP ### (STR "a") (NUM+1) (STR "b") (NUM+2) (STR "c") (NUM+3))
+-- And finally, an append indexed map for updating a value
+-- The original document was {name:"Bob",happy:false,problems:99}, 
+original:(MAP (STR "name") (STR "Bob") (STR "happy") (REF/FALSE) (STR "problems") (NUM+99))
+-- but we want to make him happy and take his problems away so we append {happy:true,problems:delete}
+(EXT*original MAP (STR "problems") (REF/DELETE) (STR "happy") (REF/TRUE))
+```
+
+If preferred, the assembly can be written in reverse to match the binary encoding order.
+
+```lua
+(("N2" STR) (("name" STR) LST):s MAP s*EXT)
+```
 
 ## Type Encoding Examples
 

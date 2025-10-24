@@ -11,6 +11,7 @@ local REF = 7 -- (index)
 local NULL = 0
 local TRUE = 1
 local FALSE = 2
+local DELETE = 3
 
 local bit = require 'bit'
 local dump = require 'dump'
