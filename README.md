@@ -83,8 +83,9 @@ Three values are always available via `REF`:
 ```text
 REF(0) → nil
 REF(1) → true
-REF(2) → false
-REF(3+) → user-defined dictionary entries
+REF(2) → false 
+REF(3) → delete (used to delete keys in append maps)
+REF(4+) → user-defined dictionary entries
 ```
 
 ### Value Types
