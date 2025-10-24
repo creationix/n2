@@ -318,7 +318,7 @@ export function encode(value: unknown): Uint8Array {
           encodeAny(parts[i])
         }
         writeUnsignedVarInt(STR, currentSize - start)
-        writeUnsignedVarInt(EXT, parts.length)
+        writeUnsignedVarInt(EXT, 0) // No target for now
         return
       }
     }
@@ -458,9 +458,10 @@ export function decode(buffer: Uint8Array): unknown {
         const base = readSignedVarInt(NUM)
         return parseFloat(`${base}e${power}`)
       } else if (type === STR) {
-        const count = Number(readUnsignedVarInt(EXT))
+        const delta = Number(readUnsignedVarInt(EXT))
+        const target = delta ? offset - delta : null
         const size = Number(readUnsignedVarInt(STR))
-        return decodeStringChain(count, size)
+        return decodeStringChain(target, size)
       } else if (type === MAP) {
         const delta = Number(readUnsignedVarInt(EXT))
         const target = offset - delta
@@ -484,15 +485,15 @@ export function decode(buffer: Uint8Array): unknown {
     return num
   }
 
-  function decodeStringChain(count: number, length: number): string {
+  function decodeStringChain(target: number | null, length: number): string {
+    if (target !== null) {
+      throw new Error("TODO: Implement string chains with target")
+    }
     const last = offset - length
     if (last < 0) throw new Error("Unexpected end of buffer")
     const items: unknown[] = []
     while (offset > last) {
       items.push(decodeAny())
-    }
-    if (items.length !== count) {
-      throw new Error(`String chain count mismatch: expected ${count} but got ${items.length}`)
     }
     return items.join("")
   }
