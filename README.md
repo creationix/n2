@@ -65,16 +65,16 @@ All multi-byte values use **little-endian** byte order.
 
 N₂ has 8 fundamental type tags:
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| `NUM` | Signed integers | Numbers in the i64 range |
-| `STR` | UTF-8 strings | Text data |
-| `BIN` | Binary data | Raw bytes, blobs |
-| `LST` | Lists/arrays | Ordered collections |
-| `MAP` | Key-value maps | Objects with keys encoded as a sub-value array |
-| `PTR` | Pointers | References to existing values (deduplication) |
-| `REF` | External references | Built-in constants or shared dictionary |
-| `EXT` | Extension data | Type modifiers (e.g., decimals, string chains) |
+| Type  | Name      | Use Case                              |
+|-------|-----------|---------------------------------------|
+| `NUM` | Number    | Integer and decimal numbers           |
+| `STR` | String    | UTF-8 encoded textual data            |
+| `BIN` | Binary    | Raw 8-bit binary data                 |
+| `LST` | List      | List of arbitrary values              |
+| `MAP` | Map       | Lists of arbitrary key/value mappings |
+| `PTR` | Pointer   | Pointers to existing values           |
+| `REF` | Reference | Built-in or external constants        |
+| `EXT` | Extended  | Type modifiers/extenders              |
 
 ### Built-in Constants
 
@@ -147,29 +147,33 @@ Sometimes a textual representation is useful for understanding how a document is
 -- Encoding it as a two segment string chain looks like:
 (EXT STR (STR "Hello") (STR " World"))
 -- Encoding the two segments using an append pointer looks like:
-(EXT*w STR (STR " World")) ... w:(STR "Hello")
+(EXT:w STR (STR " World")) ... w:(STR "Hello")
 -- Encoding {name:"N2"} looks like:
 (MAP (STR "name") (STR "N2"))
 -- But if it has an external schema it looks like:
-(EXT*s MAP (STR "N2")) ... s:(LST (STR "name"))
+(EXT:s MAP (STR "N2")) ... s:(LST (STR "name"))
 -- Or if the shared schema is inside, it looks like:
-(EXT*s MAP s:(LST (STR "name")) (STR "N2"))
+(EXT:s MAP s:(LST (STR "name")) (STR "N2"))
 -- An append list that decodes to [2,false,1,true] might look like:
-(EXT*p LST (NUM+1) (REF/1)) ... p:(LST (NUM+2) (REF/2))
+(EXT:p LST (NUM+1) (REF/1)) ... p:(LST (NUM+2) (REF/2))
 -- An indexed map for {a:1,b:2,c:3} might look like:
 (EXT/w EXT/c MAP ### (STR "a") (NUM+1) (STR "b") (NUM+2) (STR "c") (NUM+3))
 -- And finally, an append indexed map for updating a value
 -- The original document was {name:"Bob",happy:false,problems:99}, 
 original:(MAP (STR "name") (STR "Bob") (STR "happy") (REF/FALSE) (STR "problems") (NUM+99))
 -- but we want to make him happy and take his problems away so we append {happy:true,problems:delete}
-(EXT*original MAP (STR "problems") (REF/DELETE) (STR "happy") (REF/TRUE))
+(EXT:original MAP (STR "problems") (REF/DELETE) (STR "happy") (REF/TRUE))
 ```
 
 If preferred, the assembly can be written in reverse to match the binary encoding order.
 
 ```lua
-(("N2" STR) (("name" STR) LST):s MAP s*EXT)
+(("N2" STR) (("name" STR) LST):s MAP s:EXT)
 ```
+
+## Encode Options
+
+
 
 ## Type Encoding Examples
 
@@ -177,107 +181,116 @@ The following examples show how different data types are encoded. The notation `
 
 ### NUM - Integer Numbers
 
-Integers use **signed** variable-length encoding (zigzag for small values):
+Integers use **signed integer** variable-length encoding directly.  The larger the number, the larger the representation needed.
 
-```lua
--- Small values fit in the type header
-0 ↩
-  NUM(0) ↩
-    Z5(NUM,0) ↩
-    U5(NUM,0) ↩
-      00000 NUM
-
-5 ↩
-  NUM(5) ↩
-    Z5(NUM,5) ↩
-    U5(NUM,10) ↩
-      01010 NUM
-
--- Larger values use extended bytes
--42 ↩
-  NUM(-42) ↩
-    I8(NUM,-42) ↩
-    U8(NUM,214) ↩
-      11010110 11110 NUM
-
-314 ↩
-  NUM(314) ↩
-    I16(NUM,314) ↩
-    U16(NUM,314) ↩
-      00111010 00000001 11101 NUM
-```
+| Value     | N2 Assembly    | N2 Binary       |
+|-----------|----------------|-----------------|
+| `0`       | `(NUM+0)`      | `<00>`          |
+| `-10`     | `(NUM-10)`     | `<13>`          |
+| `100`     | `(NUM+100)`    | `<64 1c>`       |
+| `-1000`   | `(NUM-1000)`   | `<18fc 1d>`     |
+| `10000`   | `(NUM+10000)`  | `<1027 1d>`     |
+| `-100000` | `(NUM-100000)` | `<6079feff 1e>` |
 
 ### NUM + EXT - Decimal Numbers
 
-Decimals are encoded as **base × 10^exponent** using `NUM` for the base and `EXT` for the signed exponent:
+Decimals are encoded as **base × 10^exponent** using `NUM` for the base and `EXT` for the signed exponent.
 
-```lua
-3.14 ↩
-  NUM(314) EXT(-2) ↩    -- 314 × 10^-2
-    I16(NUM,314) Z5(EXT,-2) ↩
-    U16(NUM,314) U5(EXT,3) ↩
-      00111010 00000001 11101 NUM 00011 EXT
-```
+| Value     | N2 Assembly       | N2 Binary      |
+|-----------|-------------------|----------------|
+| `0.0001`  | `(EXT-4 NUM+1)`   | `<02 27>`      |
+| `-0.001`  | `(EXT-3 NUM-1)`   | `<01 25>`      |
+| `0.01`    | `(EXT-2 NUM+1)`   | `<02 23>`      |
+| `-0.1`    | `(EXT-1 NUM-1)`   | `<01 21>`      |
+| `0`       | `(EXT+0 NUM+0)`   | `<00 20>`      |
+| `-10`     | `(EXT+1 NUM-1)`   | `<01 22>`      |
+| `100`     | `(EXT+2 NUM+1)`   | `<02 24>`      |
+| `-1000`   | `(EXT+3 NUM-1)`   | `<01 26>`      |
+| `10000`   | `(EXT+4 NUM+1)`   | `<02 28>`      |
+| `-100000` | `(EXT+5 NUM-1)`   | `<01 2a>`      |
+| `3.14`    | `(EXT-2 NUM+314)` | `<3a01 1d 23>` |
 
 ### REF - Constants and Dictionary References
 
-Use `REF` for built-in constants or shared dictionary values:
+Use `REF` for built-in constants or shared dictionary values.  The `delete` value is used to delete entries in append maps.
 
-```lua
-nil ↩
-  REF(NIL) ↩
-    U5(REF,NIL) ↩
-      NIL REF
-
-true ↩
-  REF(TRUE) ↩
-    U5(REF,TRUE) ↩
-      TRUE REF
-
-false ↩
-  REF(FALSE) ↩
-    U5(REF,FALSE) ↩
-      FALSE REF
-
--- Dictionary value at index 20 (offset by 3 built-ins)
-sharedDictionary[20] ↩
-  REF(USER + 20) ↩
-  REF(23) ↩
-    U5(REF,23) ↩
-      10111 REF
-```
+| Value     | N2 Assembly | N2 Binary |
+|-----------|-------------|-----------|
+| `nil`     | `(REF/0)`   | `<e0>`    |
+| `true`    | `(REF/1)`   | `<e1>`    |
+| `false`   | `(REF/2)`   | `<e2>`    |
+| `delete`  | `(REF/3)`   | `<e3>`    |
+| `user[2]` | `(REF/6)`   | `<e6>`    |
 
 ### STR - UTF-8 Strings
 
-String length is in bytes, not characters. Hex values show UTF-8 encoded content:
+String length is in bytes, not characters.  Unicode is encoded as UTF-8.
+
+| Value     | N2 Assembly    | N2 Binary       |
+|-----------|----------------|-----------------|
+| `""`      | `(STR/0)`      | `<40>`          |
+| `"hi"`    | `(STR/2 "hi")` | `<6869 42>`     |
+| `"😁"`     | `(STR/4 "😁")`  | `<f09f9881 44>` |
+
+### EXT STR - String Chains (AKA Append Strings)
+
+String chains are for substring deduplication.  In many datasets there is a lot of substrings that are shared in many places.
+
+This extended type enables both linear and recursive combining of strings.
+
+For example, this small document that is a single list with 3 strings:
+
+```js
+[ '/section/first/chapter/second/where-the-wild-things|are',
+  '/section/first/chapter/second/where-the-wild-things|were',
+  '/section/first/chapter/second/where-the-wild-things|will-be' ]
+```
+
+Without `EXT STR` we would need to encode all three strings in full since they differ slightly.  
 
 ```lua
-"" ↩
-  STR(0) ↩
-    U5(STR,0) ↩
-      00000 STR
+(LST/176
+  (STR/55 '/section/first/chapter/second/where-the-wild-things|are')
+  (STR/56 '/section/first/chapter/second/where-the-wild-things|were')
+  (STR/59 '/section/first/chapter/second/where-the-wild-things|will-be') )
+```
 
-"hi" ↩
-  <6869> STR(2) ↩
-    <6869> U5(STR,2) ↩
-      <6869> 00010 STR
+Which encodes to this nice binary value.
 
-"😁" ↩    -- 4-byte UTF-8 emoji
-  <f09f9881> STR(4) ↩
-    <f09f9881> U5(STR,4) ↩
-      <f09f9881> 00100 STR
+```tibs
+< 2f73656374696f6e2f66697273742f636861707465722f7365636f6e642f77686572652d7468652d77696c642d7468696e67737c77696c6c2d6265 3b5c
+  2f73656374696f6e2f66697273742f636861707465722f7365636f6e642f77686572652d7468652d77696c642d7468696e67737c77657265 385c
+  2f73656374696f6e2f66697273742f636861707465722f7365636f6e642f77686572652d7468652d77696c642d7468696e67737c617265 375c
+  b0009d >
+```
+
+But an encoder that splits using `/[^a-z0-9]*[a-z0-9_-]/i` could break this into interesting string segments.
+
+If this was encoded using 3 linear string chains, then about 2/3 of the strings would become pointers.
+
+```lua
+(LST
+  (EXT STR s:(STR/8 "/section") f:(STR/6 "/first") c:(STR/8 "/chapter") e:(STR/7 "/second") w:(STR/22 "/where-the-wild-things") (STR/4 "|are"))
+  (EXT STR (PTR:s) (PTR:f) (PTR:c) (PTR:e) (PTR:w) (STR/5 "|were"))
+  (EXT STR (PTR:s) (PTR:f) (PTR:c) (PTR:e) (PTR:w) (STR/8 "|will-be"))
+)
+```
+
+But the `EXT` part of the append string is itself a pointer that encourages recursive values.  Using that we get an interesting shape.
+
+```lua
+(section(first(chapter(second(where-the-wild-things(are))))))
+TODO: finish
 ```
 
 ### BIN - Binary Data
 
 Identical to `STR` but for arbitrary bytes:
 
-```lua
-<deadbeef> ↩
-  <deadbeef> BIN(4) ↩
-    <deadbeef> U5(BIN,4) ↩
-      <deadbeef> 00100 BIN
-```
+| Value     | N2 Assembly        | N2 Binary       |
+|-----------|--------------------|-----------------|
+| `<>`      | `(BIN/0)`          | `<40>`          |
+| `<123456> | `(BIN/3 <123456>)` | `<123456 43>`   |
 
 ### PTR - Pointers for Deduplication
 
