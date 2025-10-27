@@ -83,7 +83,7 @@ Three values are always available via `REF`:
 ```text
 REF(0) → nil
 REF(1) → true
-REF(2) → false 
+REF(2) → false
 REF(3) → delete (used to delete keys in append maps)
 REF(4+) → user-defined dictionary entries
 ```
@@ -159,7 +159,7 @@ Sometimes a textual representation is useful for understanding how a document is
 -- An indexed map for {a:1,b:2,c:3} might look like:
 (EXT/w EXT/c MAP ### (STR "a") (NUM+1) (STR "b") (NUM+2) (STR "c") (NUM+3))
 -- And finally, an append indexed map for updating a value
--- The original document was {name:"Bob",happy:false,problems:99}, 
+-- The original document was {name:"Bob",happy:false,problems:99},
 original:(MAP (STR "name") (STR "Bob") (STR "happy") (REF/FALSE) (STR "problems") (NUM+99))
 -- but we want to make him happy and take his problems away so we append {happy:true,problems:delete}
 (EXT:original MAP (STR "problems") (REF/DELETE) (STR "happy") (REF/TRUE))
@@ -246,7 +246,7 @@ For example, this small document that is a single list with 3 strings:
   '/section/first/chapter/second/where-the-wild-things|will-be' ]
 ```
 
-Without `EXT STR` we would need to encode all three strings in full since they differ slightly.  
+Without `EXT STR` we would need to encode all three strings in full since they differ slightly.
 
 ```lua
 (LST/176
@@ -278,9 +278,19 @@ If this was encoded using 3 linear string chains, then about 2/3 of the strings 
 
 But the `EXT` part of the append string is itself a pointer that encourages recursive values.  Using that we get an interesting shape.
 
+Note that when `EXT` is non-zero, we assume the entire payload is the string to append (instead of recursive values)
+
 ```lua
-(section(first(chapter(second(where-the-wild-things(are))))))
-TODO: finish
+(LST
+  (EXT:w STR "|are")
+  (EXT:w STR "|were")
+  (EXT:w STR "|will-be")
+)
+... w:(EXT:s2 STR/22 "/where-the-file-things")
+... s2:(EXT:c STR/7 "/second")
+... c:(EXT:f STR/8 "/chapter")
+... f:(EXT:s STR/6 "/first")
+... s:(STR/8 "/section")
 ```
 
 ### BIN - Binary Data
