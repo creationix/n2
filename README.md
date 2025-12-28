@@ -113,6 +113,67 @@ Various values are encoded using the 7 core types combined with zero or more `EX
 | Schema Map    | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`SCHEMA?`<br>`VALUE*` | `off` is the relative offset between the `EXT` and the shared schema list.<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List of key values set on first use.<br>`VALUE*` is zero or more recursive values. |
 | Indexed Schema Map | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`SCHEMA?`<br>`VALUE*`| Combined capabilities of Schema Map and Indexed Map| `off` is the relative offset between the `EXT` and the shared schema list.<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List of key values set on first use.<br>`VALUE*` is zero or more recursive values. |
 
+### Understanding the Type System
+
+While the table above shows many value types, the design follows elegant patterns that make it simple to understand and implement.
+
+#### Decoding Pattern
+
+Decoders use a straightforward two-step process:
+
+1. **Read all consecutive `EXT` tags** until reaching a non-EXT type
+2. **Pattern match** on the EXT count and base type
+
+This creates an unambiguous, self-describing format where the number of EXT tags determines the interpretation:
+
+| EXT Count | Base Type | Interpretation | Parameters |
+|-----------|-----------|----------------|------------|
+| 0 | `NUM` | Integer | value is the integer |
+| 1 | `NUM` | Decimal | `ext₀` = power of 10, `NUM` = base value |
+| 1 | `STR/BIN/LST` | Append | `ext₀` = offset to prefix (or 0 for chains) |
+| 1 | `MAP` | Append or Schema* | `ext₀` → MAP (append) or LST (schema) |
+| 2 | `LST/MAP` | Indexed | `ext₀` = index width, `ext₁` = count |
+| 3 | `LST/MAP` | Indexed Append or Indexed Schema* | `ext₀` = offset, `ext₁` = width, `ext₂` = count |
+
+*Disambiguated by following the pointer: MAP target = append variant, LST target = schema variant
+
+#### Why This Is Elegant
+
+**Composability Without Flags**: Instead of using bit flags or mode bytes to indicate features, N₂ uses the *count* of EXT tags. Want an indexed list? Add two EXTs. Want indexed *and* append? Add three EXTs. This means:
+
+- No wasted bytes on feature flags
+- Clear parity pattern: odd EXT counts have append pointers, even counts don't
+- Extensible to 4-EXT, 5-EXT patterns without breaking existing decoders
+
+**Self-Describing Types**: The format disambiguates using the type system itself. When you see `EXT + MAP`, following the pointer tells you what variant it is:
+
+- Points to `MAP` → Append Map (incremental updates)
+- Points to `LST` → Schema Map (shared keys)
+
+No additional type bits needed.
+
+**Schema As Value**: Schema maps store their key list as a regular value in the value stream. When decoding:
+
+1. Follow `EXT(off)` to find the schema `LST`
+2. Parse all values in the map body
+3. Skip any value whose byte offset equals `off` (it's the schema definition)
+4. Remaining values are the data
+
+This means:
+- First use writes schema inline: `EXT:s MAP s:(LST keys...) values...`
+- Subsequent uses point to the same schema: `EXT:s MAP values...` (no schema inline)
+- Decoder doesn't care where schema lives, just skips it if present
+- Natural deduplication without special cases or external schema registries
+
+**Minimal Core, Maximum Power**: The entire type system is built from just 8 core types and one extension mechanism (`EXT`), yet it can express:
+
+- Efficient primitives (integers, decimals, strings, binary data)
+- Structural sharing via pointers (`PTR`, `REF`)
+- Incremental updates (append variants)
+- Random access (indexed variants)
+- Schema sharing (schema maps)
+- All combinations through composition
+
 ## Assembly Syntax
 
 Sometimes a textual representation is useful for understanding how a document is optimized/structured.
