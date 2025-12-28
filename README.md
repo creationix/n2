@@ -99,18 +99,19 @@ Various values are encoded using the 7 core types combined with zero or more `EX
 | Pointer       | `PTR(off:u64)`                   | `off` is the relative byte offset between the `PTR` and target. |
 | Reference     | `REF(idx:u64)`                   | `idx` is the index into a table of known values. |
 | Bytes         | `BIN(len:u64)`<br>`BYTES`        | `len` is the number of bytes.<br>`BYTES` is the value itself. |
-| Append Bytes  | `EXT(off:u64)`<br>`BIN(len:u64)`<br>`VALUE*` | `off` is optional pointer to a bianry prefix.<br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive binary values. |
+| Append Bytes  | `EXT(off:u64)`<br>`BIN(len:u64)`<br>`VALUE*` | `off` is optional pointer to a binary prefix.<br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive binary values. |
 | String        | `STR(len:u64)`<br>`BYTES`        | `len` is the number of bytes.<br>`BYTES` is the string as utf-8. |
 | Append String | `EXT(off:u64)`<br>`STR(len:u64)`<br>`VALUE*` | `off` is optional pointer to a string prefix.<br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive string values. |
 | List          | `LST(len:u64)`<br>`VALUE*`       | `len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive values. |
 | Append List   | `EXT(off:u64)`<br>`LST(len:u64)`<br>`VALUE*` | `off` is optional pointer to a list prefix.<br>`len` is the number of bytes of all children.<br>`VALUE*` is zero or more recursive values. |
 | Indexed List  | `EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`VALUE*` | `wid` is index pointer width.<br>`cnt` is count of index entries<br>`len` is the number of bytes of all children.<br>`INDEX` is an array of fixed width offset pointers _(from end of index)_<br>`VALUE*` is zero or more recursive values. |
-| Append Indexed List | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`VALUE*` | Combined capabilities of Append List and Indexed list |
+| Indexed Append List | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`LST(len:u64)`<br>`INDEX`<br>`VALUE*` | Combined capabilities of Append List and Indexed list |
 | Map           | `MAP(len:u64)`<br>`(KEY VALUE)*` | `len` is the number of bytes of all children<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
 | Append Map    | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`(KEY VALUE)*` | `off` is optional pointer to a map prefix.<br>`len` is the number of bytes of all children.<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
 | Indexed Map   | `EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | `wid` is index pointer width.<br>`cnt` is count of index entries<br>`len` is the number of bytes of all children.<br>`INDEX` is an array of fixed width offset pointers _(from end of index)_<br>`(KEY VALUE)*` is zero or more sorted recursive key-value pairs. |
-| Append Indexed Map | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | Combined capabilities of Append Map and Indexed Map |
-| Schema Map    | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`SCHEMA?`<br>`VALUE*` | `off` is the relative offset between the `EXT` and the shared schema list.<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List of key values set on first use.<br>`(KEY VALUE)*` is zero or more recursive key-value pairs. |
+| Indexed Append Map | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`(KEY VALUE)*` | Combined capabilities of Append Map and Indexed Map |
+| Schema Map    | `EXT(off:u64)`<br>`MAP(len:u64)`<br>`SCHEMA?`<br>`VALUE*` | `off` is the relative offset between the `EXT` and the shared schema list.<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List of key values set on first use.<br>`VALUE*` is zero or more recursive values. |
+| Indexed Schema Map | `EXT(off:u64)`<br>`EXT(wid:u64)`<br>`EXT(cnt:u64)`<br>`MAP(len:u64)`<br>`INDEX`<br>`SCHEMA?`<br>`VALUE*`| Combined capabilities of Schema Map and Indexed Map| `off` is the relative offset between the `EXT` and the shared schema list.<br>`len` is the number of bytes of all children.<br>`SCHEMA?` is a recursive List of key values set on first use.<br>`VALUE*` is zero or more recursive values. |
 
 ## Assembly Syntax
 
