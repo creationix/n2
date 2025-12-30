@@ -321,39 +321,38 @@ Lists encode their **total byte length** (not item count) and write items in **r
 
 ### MAP - Key-Value Maps
 
-Maps write **values first** (in reverse order), then **keys as a sub-value** (array), then the MAP header. This allows the key array to be deduplicated when multiple objects share the same structure:
+Standard Maps encode key-value pairs in an interleaved format. Keys and values are written in reverse order (last pair first).
 
 ```lua
-{ "name": "N2" } ↩
-  STR("N2") LST(["name"]) MAP(8) ↩    -- Value, then keys array, then MAP
-    <4e32> U5(STR,2) <6e616d65> U5(STR,4) U5(LST,5) U5(MAP,9) ↩
-      <4e32> 00010 STR <6e616d65> 00100 STR 00101 LST 01001 MAP
-
 { "a": 1, "b": 2 } ↩
-  NUM(2) NUM(1) LST(["a","b"]) MAP(7) ↩    -- Values reversed, then keys
-    24 22 <62> U5(STR,1) <61> U5(STR,1) U5(LST,4) U5(MAP,7) ↩
-      24 22 62 41 61 41 84 a7
+   NUM(2) STR("b") NUM(1) STR("a") MAP(6) ↩
+   -- "b":2 encoded then "a":1 encoded, then MAP header
 ```
 
-### Automatic Schema Deduplication
+### Schema Maps (Deduplication)
 
-When encoding multiple objects with the same keys, the encoder automatically deduplicates the key arrays using `PTR`. This happens naturally because keys are encoded as a separate sub-value:
+When multiple objects share the same keys (schema), N₂ uses **Schema Maps** to avoid repeating keys.
+
+1.  **The Schema**: A `LST` of keys is written once.
+2.  **The Values**: Only the values are written for each object.
+3.  **The Link**: A `MAP` tag combined with an `EXT` tag points to the schema.
 
 ```lua
--- Two objects with same keys ["a", "b"]
+-- Two objects with keys ["a", "b"]
 [ { "a": 1, "b": 2 }, { "a": 3, "b": 4 } ] ↩
 
--- First object encodes keys, second object points to them
-  NUM(4) NUM(3) LST(["a","b"]) MAP(7) ↩      -- First object: full encoding
-  NUM(2) NUM(1) PTR(keys) MAP(3) ↩           -- Second object: reuses keys via pointer
-  LST(12) ↩
+-- 1. Definition of the schema (done implicitly on first use or explicitly)
+schema: (LST (STR "a") (STR "b"))
 
--- Actual bytes:
-  28 26                    -- Values: 4, 3 (reversed)
-  62 41 61 41 84           -- Keys: ["b", "a"] as LST(4)
-  a7                       -- MAP(7)
-  24 22                    -- Values: 2, 1 (reversed)
-  c3                       -- PTR(3) points back 3 bytes to keys array
-  a3                       -- MAP(3)
-  8c                       -- LST(12)
+-- 2. First object uses EXT to point to schema
+(NUM(2) NUM(1) MAP(idx) EXT:schema)
+
+-- 3. Second object uses EXT to point to SAME schema
+(NUM(4) NUM(3) MAP(idx) EXT:schema)
+
+-- The decoder:
+-- 1. Sees EXT + MAP
+-- 2. Follows EXT pointer to get keys ["a", "b"]
+-- 3. Reads values [1, 2] from MAP body
+-- 4. Zips them together: {a:1, b:2}
 ```
