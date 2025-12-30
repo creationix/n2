@@ -355,6 +355,14 @@ Note that when `EXT` is non-zero, we assume the entire payload is the string to 
 ... s:(STR/8 "/section")
 ```
 
+Now these are shown with the string segments being external, but just like with append lists and append-maps and schema-maps, the pointed to value can also be inside the current value. It has to be either inside some value or outside the root document entirely.  In case the value is inside, it will be excluded from the string data, but be included in the total size.
+
+Consider `/a/b/c` as `/a` + `/b` + `/c` with recursive string chains...
+
+```lua
+(EXT:b STR/9 b:(EXT:a STR/5 a:(STR/2 "/a") "/b") "/c")
+```
+
 ### BIN - Binary Data
 
 Identical to `STR` but for arbitrary bytes:
@@ -496,6 +504,352 @@ N₂ is ideal for:
 - **Caching**: Compact storage with fast random access to specific values
 - **Game Save Files**: Versioned, compact saves with instant load/rollback
 - **API Responses**: Bandwidth-efficient alternative to JSON with deduplication
+
+---
+
+## Database Architecture
+
+N₂ can serve as a complete embedded database using an append-only, copy-on-write architecture. This approach combines the benefits of immutable data structures with efficient random access and incremental updates.
+
+### Design Principles
+
+1. **Pure Append-Only Log**: No compaction required, all writes append to the end
+2. **Copy-on-Write Tree**: Only modified nodes are rewritten, unchanged nodes are referenced via `PTR`
+3. **14-way Radix Tree**: Exploits N₂'s single-byte encoding for integers 0-13
+4. **Indexed Schema Maps**: 14-entry buckets using Indexed Schema Maps for O(1) lookup
+5. **Block-Based Storage**: Fixed-size blocks (64KB) with smart inlining heuristics
+
+### Tree Structure
+
+The database uses a 14-way radix tree where:
+- **Interior Nodes**: Indexed Lists with 14 PTR entries (one per digit 0-13)
+- **Leaf Buckets**: Indexed Schema Maps with up to 14 key-value pairs
+
+```lua
+-- Root: 14-way indexed list
+(EXT/1 EXT/14 LST ### ptr0 ptr1 ... ptr13)
+
+-- Interior node: 14-way indexed list
+(EXT/1 EXT/14 LST ### ptr0 ptr1 ... ptr13)
+
+-- Leaf bucket: Indexed schema map
+(EXT:schema EXT/1 EXT/14 MAP ### value0 value1 ... value13)
+```
+
+### Key Features
+
+**Relative Backward Pointers**: All pointers (PTR, EXT offsets, index entries) are relative byte offsets that always point backward to previously written data. This makes append-only storage natural and efficient.
+
+**Direct Index Pointers**: Index entries in Indexed Maps/Lists can point directly to values in older blocks, not just inline values. Since pointers are relative backward offsets, there's no difference between pointing to inline data vs old data.
+
+**Smart Inlining**: When writing a new version:
+- Small entries (<100 bytes) from old blocks (>2 blocks ago) are inlined
+- Large or recent entries use PTR to avoid duplication
+- This optimizes for block-local access while minimizing write amplification
+
+**Structural Sharing**: Copy-on-write updates only write the path from root to modified leaf:
+- Unchanged subtrees: single PTR to old node
+- Changed path: new nodes with mix of PTR (unchanged children) and inline/PTR (changed children)
+
+### Example Update
+
+```lua
+-- Original tree (block 0)
+root:(EXT/1 EXT/14 LST
+  ### ptr_to_bucket_0 ... ptr_to_bucket_13)
+
+bucket_0:(EXT:schema EXT/1 EXT/14 MAP
+  ### entry0 entry1 ... entry13)
+
+-- Update entry5 in bucket_0 (block 1)
+-- Write new bucket with changed entry
+new_bucket_0:(EXT:schema EXT/1 EXT/14 MAP
+  ### ptr_to_old_entry0 ... new_entry5 ... ptr_to_old_entry13)
+
+-- Write new root pointing to new bucket
+new_root:(EXT/1 EXT/14 LST
+  ### ptr_to_new_bucket_0 ptr_to_old_bucket_1 ... ptr_to_old_bucket_13)
+```
+
+### UI Data Layer
+
+For client applications, the raw radix tree structure is abstracted away using a **schema-aware reactive store** that presents a simple mutable map interface.
+
+#### Schema Registry
+
+Define expected schemas for different path patterns:
+
+```js
+const schemas = {
+  'users.*': ['id', 'name', 'email', 'createdAt'],
+  'messages.*': ['id', 'userId', 'text', 'timestamp'],
+  'channels.*': ['id', 'name', 'memberIds'],
+  'settings': ['theme', 'notifications', 'language']
+}
+```
+
+#### Reactive Store
+
+The store provides path-based subscriptions with automatic schema validation:
+
+```js
+class ReactiveStore {
+  constructor(n2Client, schemas) {
+    this.client = n2Client
+    this.schemas = schemas
+    this.subscriptions = new Map() // path -> Set<callback>
+    this.cache = new Map()          // path -> {data, version}
+  }
+
+  // Subscribe to a path with schema awareness
+  subscribe(path, callback) {
+    if (!this.subscriptions.has(path)) {
+      this.subscriptions.set(path, new Set())
+      this._initSubscription(path)
+    }
+    this.subscriptions.get(path).add(callback)
+
+    // Immediately call with cached data if available
+    if (this.cache.has(path)) {
+      callback(this.cache.get(path).data)
+    }
+
+    return () => this.subscriptions.get(path).delete(callback)
+  }
+
+  async _initSubscription(path) {
+    // Find matching schema pattern
+    const schema = this._findSchema(path)
+
+    // Navigate radix tree to find data
+    const data = await this.client.get(path, schema)
+
+    // Cache and notify
+    this._update(path, data)
+
+    // Listen for incremental updates
+    this.client.onDelta(path, (delta) => {
+      const merged = this._mergeWithSchema(
+        this.cache.get(path).data,
+        delta,
+        schema
+      )
+      this._update(path, merged)
+    })
+  }
+
+  _findSchema(path) {
+    for (const [pattern, schema] of Object.entries(this.schemas)) {
+      if (this._matchPattern(path, pattern)) {
+        return schema
+      }
+    }
+    return null
+  }
+
+  _matchPattern(path, pattern) {
+    // Convert pattern to regex: 'users.*' -> /^users\.[^.]+$/
+    const regex = new RegExp(
+      '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$'
+    )
+    return regex.test(path)
+  }
+
+  _mergeWithSchema(base, delta, schema) {
+    // For schema maps, merge append layers
+    if (schema) {
+      return { ...base, ...delta }
+    }
+    return delta
+  }
+
+  _update(path, data) {
+    const version = (this.cache.get(path)?.version ?? 0) + 1
+    this.cache.set(path, { data, version })
+
+    // Notify all subscribers
+    for (const callback of this.subscriptions.get(path) || []) {
+      callback(data)
+    }
+  }
+}
+```
+
+#### Collection Abstraction
+
+For large lists, provide lazy loading with windowing:
+
+```js
+class Collection {
+  constructor(store, basePath, schema) {
+    this.store = store
+    this.basePath = basePath
+    this.schema = schema
+  }
+
+  // Get single item by ID
+  async get(id) {
+    const path = `${this.basePath}.${id}`
+    return new Promise(resolve => {
+      const unsub = this.store.subscribe(path, data => {
+        resolve(data)
+        unsub()
+      })
+    })
+  }
+
+  // Subscribe to range with virtual window
+  subscribeRange(start, end, callback) {
+    const paths = []
+    for (let i = start; i < end; i++) {
+      paths.push(`${this.basePath}.${i}`)
+    }
+
+    const unsubs = paths.map(path =>
+      this.store.subscribe(path, () => {
+        // Collect all items in range
+        const items = paths
+          .map(p => this.store.cache.get(p)?.data)
+          .filter(Boolean)
+        callback(items)
+      })
+    )
+
+    return () => unsubs.forEach(u => u())
+  }
+}
+```
+
+#### N₂ Sync Client
+
+The client handles navigation of the radix tree and decoding of N₂ structures:
+
+```js
+class N2SyncClient {
+  constructor(endpoint, decoder) {
+    this.endpoint = endpoint
+    this.decoder = decoder
+    this.ws = null
+    this.rootVersion = 0
+  }
+
+  async get(path, schema) {
+    // Convert path to radix tree navigation
+    const keys = path.split('.')
+
+    // Request range containing the path
+    const blocks = await this._fetchBlocks(keys)
+
+    // Navigate tree to find value
+    let node = this.decoder.decode(blocks[0])
+    for (const key of keys) {
+      const index = this._keyToIndex(key)
+      node = this._followIndex(node, index, blocks)
+    }
+
+    // If it's a schema map, materialize all append layers
+    if (schema) {
+      return this._materializeSchemaMap(node, schema, blocks)
+    }
+
+    return node
+  }
+
+  _keyToIndex(key) {
+    // Convert string key to 14-way radix digit
+    // Simple hash: sum of char codes mod 14
+    return key.split('').reduce((acc, c) =>
+      (acc + c.charCodeAt(0)) % 14, 0
+    )
+  }
+
+  _followIndex(node, index, blocks) {
+    // Node is an indexed list/map
+    const offset = node.index[index]
+    return this.decoder.decodeAt(blocks, offset)
+  }
+
+  _materializeSchemaMap(map, schema, blocks) {
+    // Follow EXT pointer chain to collect all append layers
+    const layers = []
+    let current = map
+
+    while (current.type === 'schema_map' || current.type === 'append_map') {
+      layers.push(current)
+      if (current.appendOffset) {
+        current = this.decoder.decodeAt(blocks, current.appendOffset)
+      } else {
+        break
+      }
+    }
+
+    // Merge layers in reverse order (oldest first)
+    const result = {}
+    for (let i = layers.length - 1; i >= 0; i--) {
+      Object.assign(result, layers[i].values)
+    }
+
+    return result
+  }
+
+  async _fetchBlocks(keys) {
+    // HTTP range request for specific blocks
+    // Or WebSocket query for live data
+    const response = await fetch(
+      `${this.endpoint}/query?path=${keys.join('.')}`
+    )
+    return response.arrayBuffer()
+  }
+
+  onDelta(path, callback) {
+    if (!this.ws) {
+      this.ws = new WebSocket(`${this.endpoint}/live`)
+    }
+
+    this.ws.addEventListener('message', event => {
+      const delta = JSON.parse(event.data)
+      if (delta.path === path) {
+        callback(delta.data)
+      }
+    })
+  }
+}
+```
+
+#### Example Usage
+
+```js
+// Initialize
+const client = new N2SyncClient('https://api.example.com', decoder)
+const store = new ReactiveStore(client, schemas)
+
+// Create collections
+const messages = new Collection(store, 'messages', schemas['messages.*'])
+const users = new Collection(store, 'users', schemas['users.*'])
+
+// Subscribe to specific message
+const unsub = store.subscribe('messages.msg123', message => {
+  console.log('Message updated:', message)
+})
+
+// Subscribe to range of messages
+messages.subscribeRange(0, 50, messages => {
+  console.log('First 50 messages:', messages)
+})
+
+// Get single user
+const user = await users.get('user456')
+```
+
+### Benefits of This Architecture
+
+1. **Simple API**: Developers work with paths and schemas, not radix trees
+2. **Automatic Merging**: Schema maps transparently merge all append layers
+3. **Lazy Loading**: Only fetch data when subscribed, support virtual scrolling
+4. **Type Safety**: Schema validation ensures data consistency
+5. **Live Updates**: WebSocket deltas update subscriptions in real-time
+6. **Efficient Caching**: Client-side cache minimizes redundant fetches
+7. **Transparent Optimization**: Server can reorganize tree structure without breaking clients
 
 ---
 
