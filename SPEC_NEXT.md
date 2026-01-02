@@ -54,6 +54,40 @@ Signed integers use **Two's Complement**.
 
 ---
 
+## 2.1 Type Combinations
+
+N₂ supports compositional types through modifiers and metadata. Here are all valid combinations:
+
+**Primitives:**
+- `NUM` = `NUM` | `DEC` + `NUM`
+- `STR` = `STR`
+- `BIN` = `BIN`
+- `PTR` = `PTR` (points to any type)
+- `REF` = `REF` (constant reference)
+
+**Containers:**
+- `LST` = `LST` | `LST` + `IDX`
+- `MAP` = `MAP` | `MAP` + `SCH` | `MAP` + `IDX` | `MAP` + `IDX` + `SCH`
+
+**Concatenation (Rope):**
+- `CAT<LST>` = `CAT` + (`LST` | `PTR<LST>` | `CAT<LST>`)+
+- `CAT<MAP>` = `CAT` + (`MAP` | `PTR<MAP>` | `CAT<MAP>`)+
+- `CAT<STR>` = `CAT` + (`STR` | `PTR<STR>` | `CAT<STR>`)+
+- `CAT<BIN>` = `CAT` + (`BIN` | `PTR<BIN>` | `CAT<BIN>`)+
+
+**Metadata (Not standalone values):**
+- `SCH` = `SCH` (wraps a `PTR` to a key list)
+- `IDX` = `IDX` (offset table)
+- `DEC` = `DEC` (scale modifier for following `NUM`)
+
+**Notes:**
+- `DEC` must be immediately followed by a `NUM`
+- `SCH` and `IDX` only appear as the first value(s) inside `LST` or `MAP`
+- `CAT` children must all be the same logical type (e.g., all `LST`, or all `STR`)
+- Order for `MAP` with both: `[Values...] [IDX] [SCH] [Header]`
+
+---
+
 ## 3. Detailed Layouts
 
 All layouts are described in **memory order** (Low Address -> High Address). The Header Byte is always at the *highest* address (the end).
@@ -78,9 +112,9 @@ It specifies a decimal scale `N`, such that the logical value is `NextValue * 10
     *   `[Scale] [Header]`
 
 **Usage**:
-*   Must be followed by a `NUM` (or `PTR/REF` resolving to `NUM`).
-*   Example: `3.14` is encoded as `DEC(2)` then `NUM(314)`.
-*   Example: `DEC(0)` can be used to explicitly tag an Integer as a Decimal type.
+*   Must be followed by a `NUM`
+*   Example: `3.14` is encoded as `DEC(2)` then `NUM(314)`
+*   Example: `DEC(0)` can be used to explicitly tag an Integer as a Decimal type
 
 ### 3.3 `STR` (2) / `BIN` (3) - String / Binary
 
@@ -131,8 +165,14 @@ Classic Map. Interleaved Keys and Values. `Key1, Val1, Key2, Val2...` (Written r
 *   **Layout**: `[Key] [Val] ... [ByteLength] [Header]`
 
 **Schema Support**:
-If the **first value** inside the map is `SCH` (Tag B), the keys are implied.
+If the **first value** (in read order) inside the map is `SCH` (Tag B), the keys are implied.
 *   `[Values...] [SCH] [Header]`
+
+**Indexing Support**:
+If the map is also indexed, `IDX` (Tag C) appears **after** `SCH` (farther from header).
+*   `[Values...] [IDX] [SCH] [Header]`
+*   *Read Order*: `Header` → `SCH` → `IDX` → `Values`.
+*   `IDX` offsets point to `Values` only (they do not include the `SCH` bytes).
 
 ### 3.8 `CAT` (A) - Concatenate (Rope)
 
