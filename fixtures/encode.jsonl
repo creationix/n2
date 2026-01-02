@@ -1,0 +1,175 @@
+// This is encoding examples using alternating lines
+// Every odd non-empty line is a JSON value
+// Every even non-empty line is the encoded value in hex
+
+// === PRIMITIVES ===
+
+// NUM - Immediate (0-11)
+0
+"00"
+1
+"01"
+10
+"0a"
+11
+"0b"
+
+// NUM - i8 (Size 12)
+-1
+"ff0c"
+42
+"2a0c"
+127
+"7f0c"
+-128
+"800c"
+
+// NUM - i16 (Size 13)
+1000
+"e8030d"
+-129
+"7fff0d"
+
+// NUM - i32 (Size 14)
+70000
+"701101000e"
+
+// DEC - Decimal (Scale modifier + NUM)
+// 3.14 = 314 * 10^-2
+3.14
+"3a010d12"
+
+// 1.1 = 11 * 10^-1 (2 bytes!)
+1.1
+"0b11"
+
+// STR - Immediate length (0-11)
+""
+"02"
+"hi"
+"686922"
+"hello"
+"68656c6c6f52"
+
+// STR - 1-byte length (Size 12)
+"abcdefghijklm"
+"6162636465666768696a6b6c6d0d2c"
+
+// BIN - Binary data
+{"$bin": "AQID"}
+"01020303"
+
+// REF - Built-in constants
+null
+"50"
+true
+"51"
+false
+"52"
+
+// REF - Delete tombstone
+{"$ref": 3}
+"53"
+
+// PTR - Pointer (offset 5, 1-byte)
+{"$ptr": 5}
+"054c"
+
+// === CONTAINERS ===
+
+// LST - Simple list
+[10, 20]
+"140c0a83"
+
+// LST - Empty list
+[]
+"80"
+
+// LST - Nested list
+[[1, 2], [3, 4]]
+"01020282030402828a"
+
+// MAP - Simple map
+{"a": 1}
+"0161219393"
+
+// MAP - Empty map
+{}
+"90"
+
+// MAP - Multiple keys
+{"x": 10, "y": 20}
+"0a78210c1479219b"
+
+// === METADATA COMBINATIONS ===
+
+// LST + IDX - Indexed list
+// [10, 20] with index
+// Values: 20 (2 bytes), 10 (1 byte)
+// Offsets: [2, 3]
+// IDX: <02 03 08> (3 bytes)
+// Total: 3 (values) + 3 (idx) = 6 bytes
+{"$indexed_list": [10, 20]}
+"140c0a0203083c86"
+
+// MAP + SCH - Schema map
+// Keys at offset 0: ["x", "y"]
+// Values: [10, 20]
+// SCH wraps PTR(5)
+{"$schema_map": {"x": 10, "y": 20}}
+"140c0a54b195"
+
+// MAP + IDX + SCH - Fully indexed schema map
+// Values: [10, 20]
+// IDX: offsets to values
+// SCH: pointer to keys
+{"$full_map": {"x": 10, "y": 20}}
+"140c0a020308054cb19d"
+
+// === CONCATENATION (CAT) ===
+
+// CAT<STR> - String rope
+{"$cat": ["hello", " ", "world"]}
+"68656c6c6f5220776f726c6435ca"
+
+// CAT<LST> - List concatenation
+{"$cat": [[1, 2], [3, 4]]}
+"010202820304028208ca"
+
+// CAT<MAP> - Map merge
+{"$cat": [{"a": 1}, {"b": 2}]}
+"016121939302621939ca"
+
+// === EDGE CASES ===
+
+// Large immediate (11)
+11
+"0b"
+
+// Boundary: 12 needs explicit encoding
+12
+"0c0c"
+
+// Negative zero
+0
+"00"
+
+// Empty string
+""
+"02"
+
+// Single char string
+"a"
+"6112"
+
+// Unicode string (UTF-8)
+"🔥"
+"f09f94a542"
+
+// Deeply nested structure
+[[[1]]]
+"01018181838b"
+
+// Mixed types in list
+[1, "a", true]
+"0161125184"
