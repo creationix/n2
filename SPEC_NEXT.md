@@ -358,3 +358,29 @@ Schemas utilize labels to point to key sources.
 - **Usage**: `{label values...}` where `label` refers to a logically later key source.
 - **Indexed Schema Maps**: Combine with the `#` prefix: `{#label values...}`. In the binary encoding, the `IDX` modifier follows the `SCH` modifier (closer to the header).
 - **Example**: `[ {#box 1, 2}, box: ["x", "y"] ]`. The map is both indexed and schema-mapped.
+
+---
+
+## 8. Encoder Best Practices
+
+To produce compact and efficient N₂ documents, encoders should implement strategies for structural sharing and deduplication.
+
+### 8.1 Structural Sharing (Pointers)
+Because N₂ is written in reverse, a `PTR` can only reference data that has already been written into the buffer. Consequently:
+- **Shared Values**: Identify strings, binary blobs, or large numbers used multiple times. Write them at the beginning of the encoding process (physically at the end of the document).
+- **Logical Flow**: Logically **earlier** elements should point to logically **later** shared values.
+
+### 8.2 Schema Optimization
+Scanning the input data for repeated map structures is critical for high compression:
+- **Consolidate Keys**: Group maps with identical key sets. Write the key set as a standalone List (or another Map) physically early in the document.
+- **Tightly Packed**: By writing all shared schema lists/maps together at the start of encoding, they will be packed tightly at high addresses, minimizing pointer distance.
+
+### 8.3 Deduplication Strategies
+- **Smart Thresholding**: Pointers require a tag and a varint. Avoid deduplicating small values (e.g., strings shorter than 3-4 bytes) where the pointer overhead exceeds the content size.
+- **Reference Counting**: Only factor out values that are used at least twice *after* accounting for schema optimizations. A string used as a key in a shared schema is already "deduplicated" by the schema mechanism; it does not need a second pointer if it isn't used elsewhere.
+
+### 8.4 Recommended Ordering
+For maximum efficiency, follow this physical write order (which corresponds to reverse logical order):
+1. **Shared Primitives**: Write shared strings/blobs first.
+2. **Shared Schemas**: Write key lists that might reference the shared primitives.
+3. **Primary Data**: Write the root document, using schemas and pointers to reference the blocks above.

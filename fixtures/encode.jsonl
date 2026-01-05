@@ -14,7 +14,7 @@
 11
 "0b"
 
-// NUM - i8 (Size 12)
+// NUM - i8 (Size C)
 -1
 "ff0c"
 42
@@ -24,22 +24,25 @@
 -128
 "800c"
 
-// NUM - i16 (Size 13)
+// NUM - i16 (Size D)
 1000
 "e8030d"
 -129
 "7fff0d"
 
-// NUM - i32 (Size 14)
+// NUM - i32 (Size E)
 70000
 "701101000e"
+
+// NUM - i64 (Size F)
+1311768465173141112
+"12345678123456780f"
 
 // DEC - Decimal (Scale modifier + NUM)
 // 3.14 = 314 * 10^-2
 3.14
 "3a010d12"
-
-// 1.1 = 11 * 10^-1 (2 bytes!)
+// 1.1 = 11 * 10^-1
 1.1
 "0b11"
 
@@ -168,7 +171,7 @@ false
 
 // Deeply nested structure
 [[[1]]]
-"01018181838b"
+"01818283"
 
 // Mixed types in list
 [1, "a", true]
