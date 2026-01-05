@@ -292,8 +292,69 @@ The notation `<Hex>` indicates binary output. `XX` indicates variable payload by
 
 ## 5. Assembly Syntax
 
-*   `(NUM 42)`
-*   `(STR "hi")`
-*   `(LST (NUM 1) (NUM 2))`
-*   `(MAP (STR "a") (NUM 1))`
-*   `(IDX <offsets...>)`
+Assembly syntax allows for a human-readable representation that directly matches the physical memory layout of an N₂ document.
+
+### 5.1 Physical Order (Reverse)
+This style matches the physical byte sequence in memory (`Low Address -> High Address`). It uses a **postfix** notation where child elements and payloads precede their type header. This is ideal for comparing with hex dumps and debugging.
+
+- **Syntax**: `((Payload Tag) (Payload Tag) ContainerHeader)`
+- **Example**: `((2 NUM) (1 NUM) LST)`
+
+---
+
+## 6. Comparison Table
+
+This table compares the levels of representation for N₂:
+1. **JSON+**: Normalized JSON extended with binary (`<xx>`). Pointers and schemas are resolved into full values.
+2. **NHLS**: High-level structural representation using labels, pointers, and indexing.
+3. **Physical**: Reverse assembly (postfix notation / binary order).
+
+| JSON+ | High-Level (NHLS) | Physical (Reverse) | Binary (Hex) |
+| :--- | :--- | :--- | :--- |
+| `null` | `null` | `(0 REF)` | `50` |
+| `true` | `true` | `(1 REF)` | `51` |
+| `false` | `false` | `(2 REF)` | `52` |
+| `delete` | `delete` | `(3 REF)` | `53` |
+| `42` | `42` | `(42 NUM)` | `2A 0C` |
+| `3.14` | `3.14` | `((314 NUM) 2 DEC)` | `3A 01 0D 12` |
+| `"hi"` | `"hi"` | `("hi" STR)` | `68 69 22` |
+| `<0102>` | `<0102>` | `(<0102> BIN)` | `01 02 32` |
+| `[1, 2]` | `[1, 2]` | `((2 NUM) (1 NUM) LST)` | `02 01 82` |
+| `{"a": 1}` | `{"a": 1}` | `((1 NUM) ("a" STR) MAP)` | `01 61 21 93` |
+| `[1, 1]` | `[ *first, first:1 ]` | `((1 NUM) (1 PTR) LST)` | `01 41 82` |
+| `{"x":10}` | `{#box 10 }` | `((10 NUM) ((5 PTR) SCH) ([1,2] 08 IDX) MAP)` | `0A 41 B1 01 02 08 C3 97` |
+| `"abcdef"` | `("abc", "def")` | `(("def" STR) ("abc" STR) CAT)` | `64 65 66 23 61 62 63 23 A6` |
+| `[1, 2]` | `[# 1, 2]` | `((2 NUM) (1 NUM) ([1,2] 08 IDX) LST)` | `02 01 01 02 08 C3 86` |
+
+*\*Labels (`name:val`) and pointers (`*name`) allow for explicit structural sharing. Early points to Late.*
+*\**Schemas use a label to point to a logically later key list (written earlier).*
+
+---
+
+## 7. N₂ High-Level Syntax (NHLS)
+
+NHLS is a terse JSON superset designed specifically for N₂ documents.
+
+### 7.1 Primitives and Constants
+- **Standard JSON**: `null`, `true`, `false`, numbers, and strings.
+- **Delete**: The `delete` keyword represents the map deletion tombstone (`REF 3`).
+- **References**: Arbitrary dictionary indices use the `&` prefix: `&34`.
+- **Binary**: Hex data between angle brackets: `<001122>`.
+
+### 7.2 Containers and Metadata
+- **Indexed Containers**: Use the `#` marker immediately after the opening bracket: `[# 1, 2]` or `{# "a": 1}`.
+- **Concatenation (Ropes)**: Expressed with parentheses: `("segment1", "segment2")`.
+- **Labels and Pointers**:
+    - **Pointers**: `*label` creates a `PTR` to a logically **later** labeled value.
+    - **Labels**: `label:value` (without spaces for keys) assigns an identifier to a value.
+    - **Example**: `[ *first, first:1 ]` is valid because `first:1` is written first in the buffer.
+    - **Identifiers**: `[a-z][a-zA-Z0-9_-]*`. Reserved: `true`, `false`, `null`, `delete`.
+
+### 7.3 Schemas
+Schemas utilize labels to point to key sources.
+- **Targets**: A schema `SCH` can point to either a **List** or a **Map**.
+    - If pointing to a **List**: The items in the list are used as keys directly.
+    - If pointing to a **Map**: The **keys** of the target map are extracted and used as the schema keys.
+- **Usage**: `{label values...}` where `label` refers to a logically later key source.
+- **Indexed Schema Maps**: Combine with the `#` prefix: `{#label values...}`. In the binary encoding, the `IDX` modifier follows the `SCH` modifier (closer to the header).
+- **Example**: `[ {#box 1, 2}, box: ["x", "y"] ]`. The map is both indexed and schema-mapped.
