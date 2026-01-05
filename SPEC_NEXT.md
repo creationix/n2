@@ -322,7 +322,7 @@ This table compares the levels of representation for N₂:
 | `[1, 2]` | `[1, 2]` | `((2 NUM) (1 NUM) LST)` | `02 01 82` |
 | `{"a": 1}` | `{"a": 1}` | `((1 NUM) ("a" STR) MAP)` | `01 61 21 93` |
 | `[1, 1]` | `[ *first, first:1 ]` | `((1 NUM) (1 PTR) LST)` | `01 41 82` |
-| `{"x":10}` | `{#box 10 }` | `((10 NUM) ((5 PTR) SCH) ([1,2] 08 IDX) MAP)` | `0A 41 B1 01 02 08 C3 97` |
+| `{"x":10}` | `{#box "x":10 }` | `((10 NUM) ((5 PTR) SCH) ([1,2] 08 IDX) MAP)` | `0A 41 B1 01 02 08 C3 97` |
 | `"abcdef"` | `("abc", "def")` | `(("def" STR) ("abc" STR) CAT)` | `64 65 66 23 61 62 63 23 A6` |
 | `[1, 2]` | `[# 1, 2]` | `((2 NUM) (1 NUM) ([1,2] 08 IDX) LST)` | `02 01 01 02 08 C3 86` |
 
@@ -346,7 +346,7 @@ NHLS is a terse JSON superset designed specifically for N₂ documents.
 - **Concatenation (Ropes)**: Expressed with parentheses: `("segment1", "segment2")`.
 - **Labels and Pointers**:
     - **Pointers**: `*label` creates a `PTR` to a logically **later** labeled value.
-    - **Labels**: `label:value` (without spaces for keys) assigns an identifier to a value.
+    - **Labels**: `label:value` assigns a symbolic identifier to a value. The `label` itself is an unquoted identifier.
     - **Example**: `[ *first, first:1 ]` is valid because `first:1` is written first in the buffer.
     - **Identifiers**: `[a-z][a-zA-Z0-9_-]*`. Reserved: `true`, `false`, `null`, `delete`.
 
